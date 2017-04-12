@@ -48,29 +48,31 @@ fn main() {
     let tests_reader = serialize::read_message(&mut contents, message::ReaderOptions::new()).expect("read message failed.");
     let mut tests_to_execute :std::vec::Vec<ExecuteTest> = Vec::new();
     let top_level_tests = tests_reader.get_root::<directories::Reader>().expect("failed to get top level test root.");
+    let mut add_dir = false;
+    let mut add_file = false;
+    let mut add_test = false;
     for dir in top_level_tests.get_dirs().expect("failed to directories.").iter() {
-        let mut add_dir = false;
-        let mut add_file = false;
-        let mut add_test = false;
         let mut dirname = dir.get_name().expect("failed to get directory name.");
         let mut filename = "";
         let mut testname = "";
         if dirname == dir_to_run || dir_to_run == "" { add_dir = true; }
+        else { add_dir = false; }
         for file in dir.get_files().expect("failed to files.").iter() {
             filename = file.get_name().expect("failed to get filename.");
             if filename == file_to_run || file_to_run == "" { add_file = true; }
+            else { add_file = false; }
             for test in file.get_tests().expect("failed to get tests.").iter() {
                 testname = test.get_name().expect("failed to get test name.");
                 if testname == test_to_run || test_to_run == "" {
                     add_test = true;
                     if add_dir && add_file && add_test {
                         let execute_test = ExecuteTest {
-                            name: format!("{}/{}/{}", dirname, filename, testname),
+                            name: format!("{}::{}::{}", dirname, filename, testname),
                             test: test,
                         };
                         tests_to_execute.push(execute_test);
                     }
-                }
+                } else { add_test = false; }
             }
         }
     }
@@ -87,10 +89,10 @@ fn test_scope(test_to_run: String) -> (String, String, String) {
 }
 
 fn has_all_tests_passed(tests_to_execute: std::vec::Vec<ExecuteTest>, keep_going: bool) -> bool {
-    println!("Executing tests:");
+    println!("running {} tests", tests_to_execute.len());
     let mut has_all_tests_passed = true;
     for test in tests_to_execute {
-        print!("--> {:?} ", test.name);
+        print!("sputnikvm test {} ", test.name);
         let test = test.test;
         let eo = test.get_expected_output().expect("failed to get expected output");
         let io = test.get_input_output().expect("failed to get actual input");
