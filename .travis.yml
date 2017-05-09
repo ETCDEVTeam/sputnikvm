@@ -11,13 +11,14 @@ script:
     export PATH="$PATH":~/.cargo/bin &&
     export RUST_BACKTRACE=1 &&
     cd gaslighter &&
-    cargo build &&
-    cargo test --verbose &&
-    cargo doc --no-deps &&
     git clone https://github.com/ethereumproject/tests.git &&
     cd tests &&
     git checkout develop &&
     cd .. &&
+    travis-cargo build &&
+    travis-cargo test &&
+    travis-cargo bench &&
+    travis-cargo --only stable doc
     cargo run -- crat -f tests/VMTests/vmArithmeticTest.json &&
     cargo run -- crat -f tests/VMTests/vmBitwiseLogicOperationTest.json &&
     cargo run -- crat -f tests/VMTests/vmBlockInfoTest.json &&
@@ -27,7 +28,49 @@ script:
     cargo run -- crat -f tests/VMTests/vmPushDupSwapTest.json &&
     cargo run -- crat -f tests/VMTests/vmSha3Test.json &&
     cargo run -- crat -f tests/VMTests/vmEnvironmentalInfoTest.json &&
-    cd ..
+    ln -s ../target target
+
+install:
+  - sudo apt-get install -y gdb
+
+addons:
+  apt:
+    packages:
+      - libcurl4-openssl-dev
+      - libelf-dev
+      - libdw-dev
+      - binutils-dev
+
+before_script: |
+  PKGNAME="gaslighter"
+  LOCAL="~/.local"
+  export PATH=$LOCAL/bin:$PATH
+  ulimit -c unlimited -S
+
+after_success: |
+  wget https://github.com/SimonKagstrom/kcov/archive/master.tar.gz &&
+  tar xzf master.tar.gz && mkdir kcov-master/build && cd kcov-master/build &&
+  cmake -DCMAKE_INSTALL_PREFIX:PATH=$LOCAL .. && make &&
+  make install && cd ../.. &&
+
+  PKGID="$(cargo pkgid)" &&
+  [ -z "$PKGID" ] && exit 1 &&
+  ORIGIN="${PKGID%#*}" &&
+  ORIGIN="${ORIGIN:7}" &&
+  PKGNAME="${ORIGIN##*/}" &&
+  PKGNAMEVER="${PKGID#*#}" &&
+
+  echo "cargo pkgid: $PKGID" &&
+  echo " -> origin: $ORIGIN" &&
+  echo " -> name: $PKGNAME" &&
+  echo " -> version: $PKGNAMEVER" &&
+
+  kcov  --verify \
+        --coveralls-id=$TRAVIS_JOB_ID \
+        $ORIGIN/target/cov $ORIGIN/target/debug/$PKGNAME
+  COREFILE=$(find . -maxdepth 1 -name "core*" | head -n 1)
+  if [[ -f "$COREFILE" ]]; then gdb -c "$COREFILE" gaslighter -ex "thread apply all bt" -ex "set pagination 0" -batch; fi
+
 
 matrix:
   allow_failures:
