@@ -30,6 +30,7 @@ script:
     cargo run -- crat -f tests/VMTests/vmEnvironmentalInfoTest.json &&
     ln -s ../target target
 
+
 addons:
   apt:
     packages:
@@ -49,10 +50,30 @@ after_success: |
   cmake -DCMAKE_INSTALL_PREFIX:PATH=$LOCAL .. && make &&
   make install && cd ../.. &&
 
-  kcov --verify \
-       --coveralls-id=$TRAVIS_JOB_ID \
-       --exclude-pattern=/.cargo \
-       target/kcov target/debug/$PKGNAME-*
+  PKGID="$(cargo pkgid)"
+  [ -z "$PKGID" ] && exit 1
+  ORIGIN="${PKGID%#*}"
+  ORIGIN="${ORIGIN:7}"
+  PKGNAME="${ORIGIN##*/}"
+  PKGNAMEVER="${PKGID#*#}"
+
+  echo "cargo pkgid: $PKGID"
+  echo " -> origin: $ORIGIN"
+  echo " -> name: $PKGNAME"
+  echo " -> version: $PKGNAMEVER"
+
+  shift
+  cargo test --no-run || exit $?
+  EXE=($ORIGIN/target/debug/$PKGNAME)
+  if [ ${#EXE[@]} -ne 1 ]; then
+      echo 'Non-unique test file, retrying...' >2
+      rm -f ${EXE[@]}
+      cargo test --no-run || exit $?
+  fi
+  rm -rf $ORIGIN/target/cov
+  kcov  --verify \
+        --coveralls-id=$TRAVIS_JOB_ID \
+        $ORIGIN/target/cov $ORIGIN/target/debug/$PKGNAME "$@"
 
 matrix:
   allow_failures:
