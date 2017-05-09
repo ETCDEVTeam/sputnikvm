@@ -28,7 +28,7 @@ script:
     cargo run -- crat -f tests/VMTests/vmPushDupSwapTest.json &&
     cargo run -- crat -f tests/VMTests/vmSha3Test.json &&
     cargo run -- crat -f tests/VMTests/vmEnvironmentalInfoTest.json &&
-    cd ..
+    ln -s ../target target
 
 addons:
   apt:
@@ -44,8 +44,8 @@ before_script:
       export PATH=$HOME/.local/bin:$PATH
 
 after_success:
-  - travis-cargo --all --only stable doc-upload
-  - travis-cargo --all coveralls --no-sudo --verify
+  - travis-cargo --only stable doc-upload
+  - travis-cargo coveralls --no-sudo --verify
 
 matrix:
   allow_failures:
