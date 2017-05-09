@@ -30,6 +30,8 @@ script:
     cargo run -- crat -f tests/VMTests/vmEnvironmentalInfoTest.json &&
     ln -s ../target target
 
+install:
+  - sudo apt-get install -y gdb
 
 addons:
   apt:
@@ -43,6 +45,7 @@ before_script: |
   PKGNAME="gaslighter"
   LOCAL="~/.local"
   export PATH=$LOCAL/bin:$PATH
+  ulimit -c unlimited -S
 
 after_success: |
   wget https://github.com/SimonKagstrom/kcov/archive/master.tar.gz &&
@@ -50,30 +53,24 @@ after_success: |
   cmake -DCMAKE_INSTALL_PREFIX:PATH=$LOCAL .. && make &&
   make install && cd ../.. &&
 
-  PKGID="$(cargo pkgid)"
-  [ -z "$PKGID" ] && exit 1
-  ORIGIN="${PKGID%#*}"
-  ORIGIN="${ORIGIN:7}"
-  PKGNAME="${ORIGIN##*/}"
-  PKGNAMEVER="${PKGID#*#}"
+  PKGID="$(cargo pkgid)" &&
+  [ -z "$PKGID" ] && exit 1 &&
+  ORIGIN="${PKGID%#*}" &&
+  ORIGIN="${ORIGIN:7}" &&
+  PKGNAME="${ORIGIN##*/}" &&
+  PKGNAMEVER="${PKGID#*#}" &&
 
-  echo "cargo pkgid: $PKGID"
-  echo " -> origin: $ORIGIN"
-  echo " -> name: $PKGNAME"
-  echo " -> version: $PKGNAMEVER"
+  echo "cargo pkgid: $PKGID" &&
+  echo " -> origin: $ORIGIN" &&
+  echo " -> name: $PKGNAME" &&
+  echo " -> version: $PKGNAMEVER" &&
 
-  shift
-  cargo test --no-run || exit $?
-  EXE=($ORIGIN/target/debug/$PKGNAME)
-  if [ ${#EXE[@]} -ne 1 ]; then
-      echo 'Non-unique test file, retrying...' >2
-      rm -f ${EXE[@]}
-      cargo test --no-run || exit $?
-  fi
-  rm -rf $ORIGIN/target/cov
   kcov  --verify \
         --coveralls-id=$TRAVIS_JOB_ID \
-        $ORIGIN/target/cov $ORIGIN/target/debug/$PKGNAME "$@"
+        $ORIGIN/target/cov $ORIGIN/target/debug/$PKGNAME
+  COREFILE=$(find . -maxdepth 1 -name "core*" | head -n 1)
+  if [[ -f "$COREFILE" ]]; then gdb -c "$COREFILE" gaslighter -ex "thread apply all bt" -ex "set pagination 0" -batch; fi
+
 
 matrix:
   allow_failures:
