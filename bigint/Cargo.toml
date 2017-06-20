@@ -7,4 +7,4 @@ description = "Big integer (256-bit and 512-bit) implementation for SputnikVM."
 repository = "https://github.com/ethereumproject/sputnikvm"
 
 [dependencies]
-sputnikvm-rlp = { path = '../rlp' }
+sputnikvm-rlp = "0.2.0"
