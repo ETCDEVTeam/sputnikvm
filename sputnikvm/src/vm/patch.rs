@@ -1,16 +1,32 @@
+//! Patch of a VM, indicating different hard-fork of the Ethereum
+//! block range.
+
+/// Represents different block range context.
 pub struct Patch {
+    /// Limit of the call stack.
     pub callstack_limit: usize,
+    /// Gas paid for extcode.
     pub gas_extcode: usize,
+    /// Gas paid for BALANCE opcode.
     pub gas_balance: usize,
+    /// Gas paid for SLOAD opcode.
     pub gas_sload: usize,
+    /// Gas paid for SUICIDE opcode.
     pub gas_suicide: usize,
+    /// Gas paid for SUICIDE opcode when it hits a new account.
     pub gas_suicide_new_account: usize,
+    /// Gas paid for CALL opcode.
     pub gas_call: usize,
+    /// Gas paid for EXP opcode for every byte.
     pub gas_expbyte: usize,
+    /// Gas paid for a contract creation transaction.
     pub gas_transaction_create: usize,
+    /// Whether to force code deposit even if it does not have enough
+    /// gas.
     pub force_code_deposit: bool,
 }
 
+/// Frontier patch.
 pub static FRONTIER_PATCH: Patch = Patch {
     callstack_limit: 1024,
     gas_extcode: 20,
@@ -24,6 +40,7 @@ pub static FRONTIER_PATCH: Patch = Patch {
     force_code_deposit: true,
 };
 
+/// Patch specific for the `jsontests` crate.
 pub static VMTEST_PATCH: Patch = Patch {
     callstack_limit: 2,
     gas_extcode: 20,
