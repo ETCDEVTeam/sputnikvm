@@ -145,10 +145,10 @@ fn main() {
         (@arg BLOCK: --block +takes_value "Block number associated.")
         (@arg PATCH: --patch +takes_value "Patch to be used.")
         (@arg GAS_LIMIT: --gas_limit +takes_value "Gas limit.")
-        (@arg GAS_PRICE: --gas_price +takes_value "Gas price.")
+        (@arg GAS_PRICE: --gas_price +takes_value "Gas price, usually you will want this to be zero if no RPC endpoint is specified.")
         (@arg CALLER: --caller +takes_value "Caller of the transaction.")
         (@arg ADDRESS: --address +takes_value "Address of the transaction.")
-        (@arg VALUE: --value +takes_value "Value of the transaction.")
+        (@arg VALUE: --value +takes_value "Value of the transaction, usually you will want this to be zero if no RPC endpoint is specified.")
         (@arg FILE: --file +takes_value "Read config from a file.")
     ).get_matches();
 
@@ -213,6 +213,10 @@ fn main() {
         let mut client = NormalGethRPCClient::new(matches.value_of("RPC").unwrap());
         from_rpc_block(&client.get_block_by_number(&block_number))
     } else {
+        if gas_price > Gas::zero() || value > U256::zero() {
+            panic!("Cannot continue as gas price or value is greater than zero but no account states is provided. You need to run this with a RPC endpoint.");
+        }
+
         BlockHeader {
             coinbase: Address::default(),
             timestamp: M256::zero(),
