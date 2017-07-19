@@ -1,6 +1,9 @@
 #[macro_use]
 extern crate clap;
 extern crate sputnikvm;
+extern crate serde;
+#[macro_use]
+extern crate serde_derive;
 extern crate serde_json;
 extern crate gethrpc;
 
@@ -11,6 +14,7 @@ use sputnikvm::vm::{BlockHeader, Context, SeqTransactionVM, Transaction, VM, Log
 use sputnikvm::vm::errors::RequireError;
 use gethrpc::{GethRPCClient, NormalGethRPCClient, RPCBlock};
 use std::str::FromStr;
+use std::fs::File;
 
 fn from_rpc_block(block: &RPCBlock) -> BlockHeader {
     BlockHeader {
@@ -139,14 +143,13 @@ fn main() {
         (@arg RPC: --rpc +takes_value "Indicate this EVM should be run on an actual blockchain.")
         (@arg DATA: --data +takes_value "Data associated with this transaction.")
         (@arg BLOCK: --block +takes_value "Block number associated.")
-        (@arg PATCH: --patch +takes_value +required "Patch to be used.")
+        (@arg PATCH: --patch +takes_value "Patch to be used.")
         (@arg GAS_LIMIT: --gas_limit +takes_value "Gas limit.")
         (@arg GAS_PRICE: --gas_price +takes_value "Gas price.")
         (@arg CALLER: --caller +takes_value "Caller of the transaction.")
         (@arg ADDRESS: --address +takes_value "Address of the transaction.")
         (@arg VALUE: --value +takes_value "Value of the transaction.")
         (@arg FILE: --file +takes_value "Read config from a file.")
-        (@arg JSON: --json "Output json instead of human readable format.")
     ).get_matches();
 
     let config = if matches.value_of("FILE").is_some() {
@@ -156,29 +159,21 @@ fn main() {
         Config::default()
     };
 
-    let code = read_hex(matches.value_of("CODE").unwrap_or(config.code)).unwrap();
-    let data = read_hex(matches.value_of("DATA").unwrap_or(config.data)).unwrap();
-    let address = Address::from_str(matches.value_of("ADDRESS").unwrap_or(config.address)).unwrap();
-    let caller = {
-        let val = matches.value_of("CALLER").unwrap_or(config.caller);
-        if val.starts_with("0x") {
-            Address::from_str(val).unwrap()
-        } else {
-            let val: usize = val.parse().unwrap();
-            Address::from(val)
-        }
-    };
+    let code = read_hex(matches.value_of("CODE").unwrap_or(&config.code)).unwrap();
+    let data = read_hex(matches.value_of("DATA").unwrap_or(&config.data)).unwrap();
+    let address = Address::from_str(matches.value_of("ADDRESS").unwrap_or(&config.address)).unwrap();
+    let caller = Address::from_str(matches.value_of("CALLER").unwrap_or(&config.caller)).unwrap();
     let value = {
-        let val = matches.value_of("VALUE").unwrap_or(config.value);
+        let val = matches.value_of("VALUE").unwrap_or(&config.value);
         if val.starts_with("0x") {
             U256::from_str(val).unwrap()
         } else {
             let val: usize = val.parse().unwrap();
-            Address::from(val)
+            U256::from(val)
         }
     };
     let gas_limit = {
-        let val = matches.value_of("GAS_LIMIT").unwrap_or(config.gasLimit);
+        let val = matches.value_of("GAS_LIMIT").unwrap_or(&config.gasLimit);
         if val.starts_with("0x") {
             Gas::from_str(val).unwrap()
         } else {
@@ -187,7 +182,7 @@ fn main() {
         }
     };
     let gas_price = {
-        let val = matches.value_of("GAS_PRICE").unwrap_or(config.gasPrice);
+        let val = matches.value_of("GAS_PRICE").unwrap_or(&config.gasPrice);
         if val.starts_with("0x") {
             Gas::from_str(val).unwrap()
         } else {
@@ -196,9 +191,9 @@ fn main() {
         }
     };
     let block_number = {
-        let val = matches.value_of("BLOCK").unwrap_or(config.number);
+        let val = matches.value_of("BLOCK").unwrap_or(&config.number);
         if val.starts_with("0x") {
-            val
+            val.to_string()
         } else {
             let val: usize = val.parse().unwrap();
             format!("0x{:x}", val)
@@ -206,7 +201,7 @@ fn main() {
     };
 
     let is_create = matches.is_present("CREATE") || config.create;
-    let patch = match matches.value_of("PATCH").unwrap_or(config.patch) {
+    let patch = match matches.value_of("PATCH").unwrap_or(&config.patch) {
         "frontier" => &FRONTIER_PATCH,
         "homestead" => &HOMESTEAD_PATCH,
         "eip150" => &EIP150_PATCH,
@@ -216,12 +211,12 @@ fn main() {
 
     let block = if matches.is_present("RPC") {
         let mut client = NormalGethRPCClient::new(matches.value_of("RPC").unwrap());
-        from_rpc_block(&client.get_block_by_number(block_number))
+        from_rpc_block(&client.get_block_by_number(&block_number))
     } else {
         BlockHeader {
             coinbase: Address::default(),
             timestamp: M256::zero(),
-            number: M256::from_str(block_number).unwrap(),
+            number: M256::from_str(&block_number).unwrap(),
             difficulty: M256::zero(),
             gas_limit: Gas::zero(),
         }
@@ -241,11 +236,8 @@ fn main() {
     let mut vm = SeqTransactionVM::new(transaction, block, patch);
     if matches.is_present("RPC") {
         let mut client = NormalGethRPCClient::new(matches.value_of("RPC").unwrap());
-        handle_fire_with_rpc(&mut client, &mut vm, block_number);
+        handle_fire_with_rpc(&mut client, &mut vm, &block_number);
     } else {
         handle_fire_without_rpc(&mut vm);
     }
-
-    println!("VM returned: {:?}", vm.status());
-    println!("VM out: {:?}", vm.out());
 }
