@@ -98,13 +98,44 @@ fn handle_fire_with_rpc<T: GethRPCClient>(client: &mut T, vm: &mut SeqTransactio
     }
 }
 
+#[derive(Serialize, Deserialize)]
+struct Config {
+    create: bool,
+    code: String,
+    data: String,
+    number: String,
+    patch: String,
+    gasLimit: String,
+    gasPrice: String,
+    caller: String,
+    address: String,
+    value: String
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Config {
+            create: false,
+            code: "".to_string(),
+            data: "".to_string(),
+            number: "0".to_string(),
+            patch: "eip160".to_string(),
+            gasLimit: "1000000000000000".to_string(),
+            gasPrice: "0".to_string(),
+            caller: "0x0000000000000000000000000000000000000000".to_string(),
+            address: "0x0000000000000000000000000000000000000000".to_string(),
+            value: "0".to_string(),
+        }
+    }
+}
+
 fn main() {
     let matches = clap_app!(sputnikvm =>
         (version: "0.1")
         (author: "Ethereum Classic Contributors")
         (about: "CLI tool for SputnikVM.")
         (@arg CREATE: --create "Execute a CreateContract transaction instead of message call.")
-        (@arg CODE: --code +takes_value +required "Code to be executed.")
+        (@arg CODE: --code +takes_value "Code to be executed.")
         (@arg RPC: --rpc +takes_value "Indicate this EVM should be run on an actual blockchain.")
         (@arg DATA: --data +takes_value "Data associated with this transaction.")
         (@arg BLOCK: --block +takes_value "Block number associated.")
@@ -114,24 +145,74 @@ fn main() {
         (@arg CALLER: --caller +takes_value "Caller of the transaction.")
         (@arg ADDRESS: --address +takes_value "Address of the transaction.")
         (@arg VALUE: --value +takes_value "Value of the transaction.")
+        (@arg FILE: --file +takes_value "Read config from a file.")
+        (@arg JSON: --json "Output json instead of human readable format.")
     ).get_matches();
 
-    let code = read_hex(matches.value_of("CODE").unwrap()).unwrap();
-    let data = read_hex(matches.value_of("DATA").unwrap_or("")).unwrap();
-    let caller = Address::from_str(matches.value_of("CALLER").unwrap_or("0x0000000000000000000000000000000000000000")).unwrap();
-    let address = Address::from_str(matches.value_of("ADDRESS").unwrap_or("0x0000000000000000000000000000000000000000")).unwrap();
-    let value = U256::from_str(matches.value_of("VALUE").unwrap_or("0x0")).unwrap();
-    let gas_limit = Gas::from_str(matches.value_of("GAS_LIMIT").unwrap_or("0x2540be400")).unwrap();
-    let gas_price = Gas::from_str(matches.value_of("GAS_PRICE").unwrap_or("0x0")).unwrap();
-    let is_create = matches.is_present("CREATE");
-    let patch = match matches.value_of("PATCH") {
-        Some("frontier") => &FRONTIER_PATCH,
-        Some("homestead") => &HOMESTEAD_PATCH,
-        Some("eip150") => &EIP150_PATCH,
-        Some("eip160") => &EIP160_PATCH,
+    let config = if matches.value_of("FILE").is_some() {
+        let file = File::open(matches.value_of("FILE").unwrap()).unwrap();
+        serde_json::from_reader(file).unwrap()
+    } else {
+        Config::default()
+    };
+
+    let code = read_hex(matches.value_of("CODE").unwrap_or(config.code)).unwrap();
+    let data = read_hex(matches.value_of("DATA").unwrap_or(config.data)).unwrap();
+    let address = Address::from_str(matches.value_of("ADDRESS").unwrap_or(config.address)).unwrap();
+    let caller = {
+        let val = matches.value_of("CALLER").unwrap_or(config.caller);
+        if val.starts_with("0x") {
+            Address::from_str(val).unwrap()
+        } else {
+            let val: usize = val.parse().unwrap();
+            Address::from(val)
+        }
+    };
+    let value = {
+        let val = matches.value_of("VALUE").unwrap_or(config.value);
+        if val.starts_with("0x") {
+            U256::from_str(val).unwrap()
+        } else {
+            let val: usize = val.parse().unwrap();
+            Address::from(val)
+        }
+    };
+    let gas_limit = {
+        let val = matches.value_of("GAS_LIMIT").unwrap_or(config.gasLimit);
+        if val.starts_with("0x") {
+            Gas::from_str(val).unwrap()
+        } else {
+            let val: usize = val.parse().unwrap();
+            Gas::from(val)
+        }
+    };
+    let gas_price = {
+        let val = matches.value_of("GAS_PRICE").unwrap_or(config.gasPrice);
+        if val.starts_with("0x") {
+            Gas::from_str(val).unwrap()
+        } else {
+            let val: usize = val.parse().unwrap();
+            Gas::from(val)
+        }
+    };
+    let block_number = {
+        let val = matches.value_of("BLOCK").unwrap_or(config.number);
+        if val.starts_with("0x") {
+            val
+        } else {
+            let val: usize = val.parse().unwrap();
+            format!("0x{:x}", val)
+        }
+    };
+
+    let is_create = matches.is_present("CREATE") || config.create;
+    let patch = match matches.value_of("PATCH").unwrap_or(config.patch) {
+        "frontier" => &FRONTIER_PATCH,
+        "homestead" => &HOMESTEAD_PATCH,
+        "eip150" => &EIP150_PATCH,
+        "eip160" => &EIP160_PATCH,
         _ => panic!("Unsupported patch."),
     };
-    let block_number = matches.value_of("BLOCK").unwrap_or("0x0");
 
     let block = if matches.is_present("RPC") {
         let mut client = NormalGethRPCClient::new(matches.value_of("RPC").unwrap());
