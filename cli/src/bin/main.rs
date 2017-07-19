@@ -16,6 +16,8 @@ use gethrpc::{GethRPCClient, NormalGethRPCClient, RPCBlock};
 use std::str::FromStr;
 use std::fs::File;
 
+mod serialize;
+
 fn from_rpc_block(block: &RPCBlock) -> BlockHeader {
     BlockHeader {
         coinbase: Address::from_str(&block.miner).unwrap(),
@@ -243,5 +245,7 @@ fn main() {
         handle_fire_with_rpc(&mut client, &mut vm, &block_number);
     } else {
         handle_fire_without_rpc(&mut vm);
-    }
+    };
+
+    println!("{}", serialize::to_result(&vm));
 }
