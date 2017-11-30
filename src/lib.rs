@@ -145,9 +145,9 @@ pub type SeqTransactionVM<P> = TransactionVM<SeqMemory<P>, P>;
 
 /// A VM that executes using a context and block information.
 pub struct ContextVM<M, P: Patch> {
-    runtime: Runtime,
-    machines: Vec<Machine<M, P>>,
-    history: Vec<Context>
+    pub runtime: Runtime,
+    pub machines: Vec<Machine<M, P>>,
+    pub history: Vec<Context>
 }
 
 impl<M: Memory + Default, P: Patch> ContextVM<M, P> {
