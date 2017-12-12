@@ -5,7 +5,7 @@ license = "Apache-2.0"
 authors = ["Wei Tang <hi@that.world>"]
 description = "SputnikVM - a Portable Blockchain Virtual Machine"
 repository = "https://github.com/ethereumproject/sputnikvm"
-keywords = ["no_std"]
+keywords = ["no_std", "ethereum"]
 
 [lib]
 name = "sputnikvm"
