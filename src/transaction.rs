@@ -285,6 +285,19 @@ enum TransactionVMState<M, P: Patch> {
 pub struct TransactionVM<M, P: Patch>(TransactionVMState<M, P>);
 
 impl<M: Memory + Default, P: Patch> TransactionVM<M, P> {
+    pub fn new_from_unknown(transaction: VMTransaction, block: HeaderParams) -> Option<Self> {
+        let valid = transaction.to_valid::<P>()?;
+        let mut vm = TransactionVM(TransactionVMState::Constructing {
+            transaction: valid,
+            block: block,
+
+            account_state: AccountState::default(),
+            blockhash_state: BlockhashState::default(),
+        });
+        vm.commit_account(transaction.caller).unwrap();
+        Some(vm)
+    }
+
     /// Create a new VM using the given transaction, block header and
     /// patch. This VM runs at the transaction level.
     pub fn new(transaction: ValidTransaction, block: HeaderParams) -> Self {
