@@ -79,16 +79,16 @@ impl ValidTransaction {
     /// Create a valid transaction from a block transaction. Caller is
     /// always Some.
     pub fn from_transaction<P: Patch>(
-        transaction: &Transaction, account_state: &AccountState<P::Account>
-    ) -> Result<Result<ValidTransaction, PreExecutionError>, RequireError> {
+        transaction: &Transaction, caller_nonce: U256, caller_balance: U256
+    ) -> Result<ValidTransaction, PreExecutionError> {
         let caller = match transaction.caller() {
             Ok(val) => val,
-            Err(_) => return Ok(Err(PreExecutionError::InvalidCaller)),
+            Err(_) => return Err(PreExecutionError::InvalidCaller),
         };
 
-        let nonce = account_state.nonce(caller)?;
+        let nonce = caller_nonce;
         if nonce != transaction.nonce {
-            return Ok(Err(PreExecutionError::InvalidNonce));
+            return Err(PreExecutionError::InvalidNonce);
         }
 
         let valid = ValidTransaction {
@@ -102,15 +102,15 @@ impl ValidTransaction {
         };
 
         if valid.gas_limit < valid.intrinsic_gas::<P>() {
-            return Ok(Err(PreExecutionError::InsufficientGasLimit));
+            return Err(PreExecutionError::InsufficientGasLimit);
         }
 
-        let balance = account_state.balance(caller)?;
+        let balance = caller_balance;
         if balance < valid.preclaimed_value() + valid.value {
-            return Ok(Err(PreExecutionError::InsufficientBalance));
+            return Err(PreExecutionError::InsufficientBalance);
         }
 
-        Ok(Ok(valid))
+        Ok(valid)
     }
 }
 
