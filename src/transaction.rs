@@ -55,6 +55,68 @@ macro_rules! system_address {
 /// transaction will also not invoke creation of the beneficiary
 /// address if it does not exist before.
 
+pub struct VMTransaction {
+    pub caller: Option<AccountCommitment>,
+    pub gas_price: Gas,
+    pub gas_limit: Gas,
+    pub action: TransactionAction,
+    pub value: U256,
+    pub input: Rc<Vec<u8>>,
+}
+
+impl VMTransaction {
+    pub fn to_valid<P: Patch>(&self) -> Option<ValidTransaction> {
+        let valid = if self.caller.is_some() {
+            let (nonce, balance, address) = match self.caller.clone().unwrap() {
+                AccountCommitment::Full { nonce, balance, address, .. } => {
+                    (nonce, balance, address)
+                },
+                _ => return None,
+            };
+
+            let gas_limit: U256 = self.gas_limit.into();
+            let gas_price: U256 = self.gas_price.into();
+
+            let (preclaimed_value, overflowed1) = gas_limit.overflowing_mul(gas_price);
+            let (total, overflowed2) = preclaimed_value.overflowing_add(self.value);
+
+            if overflowed1 || overflowed2 {
+                return None;
+            }
+
+            if balance < total {
+                return None;
+            }
+
+            ValidTransaction {
+                caller: Some(address),
+                gas_price: self.gas_price,
+                gas_limit: self.gas_limit,
+                action: self.action.clone(),
+                value: self.value,
+                input: self.input.clone(),
+                nonce: nonce,
+            }
+        } else {
+            ValidTransaction {
+                caller: None,
+                gas_price: self.gas_price,
+                gas_limit: self.gas_limit,
+                action: self.action.clone(),
+                value: self.value,
+                input: self.input.clone(),
+                nonce: U256::zero(),
+            }
+        };
+
+        if valid.gas_limit < valid.intrinsic_gas::<P>() {
+            return None;
+        }
+
+        return Some(valid);
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct ValidTransaction {
     /// Caller of this transaction. If caller is None, then this is a
