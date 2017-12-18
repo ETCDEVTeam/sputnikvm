@@ -106,7 +106,17 @@ impl ValidTransaction {
         }
 
         let balance = caller_balance;
-        if balance < valid.preclaimed_value() + valid.value {
+
+        let gas_limit: U256 = valid.gas_limit.into();
+        let gas_price: U256 = valid.gas_price.into();
+
+        let (preclaimed_value, overflowed1) = gas_limit.overflowing_mul(gas_price);
+        let (total, overflowed2) = preclaimed_value.overflowing_add(valid.value);
+        if overflowed1 || overflowed2 {
+            return Err(PreExecutionError::InsufficientBalance);
+        }
+
+        if balance < total {
             return Err(PreExecutionError::InsufficientBalance);
         }
 
@@ -195,7 +205,9 @@ impl ValidTransaction {
     /// When the execution of a transaction begins, this preclaimed
     /// value is deducted from the account.
     pub fn preclaimed_value(&self) -> U256 {
-        (self.gas_limit * self.gas_price).into()
+        let gas_limit: U256 = self.gas_limit.into();
+        let gas_price: U256 = self.gas_price.into();
+        (gas_limit.saturating_mul(gas_price)).into()
     }
 }
 
