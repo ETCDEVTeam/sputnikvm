@@ -14,9 +14,7 @@ use alloc::Vec;
 #[cfg(not(feature = "std"))] use core::ops::Deref;
 use bigint::{U256, H256, Address, Gas};
 
-use super::errors::{RequireError, CommitError};
-#[cfg(feature = "std")]
-use super::errors::PreExecutionError;
+use super::errors::{RequireError, CommitError, PreExecutionError};
 use super::{State, Machine, Context, ContextVM, VM, AccountState,
             BlockhashState, Patch, HeaderParams, Memory, VMStatus,
             AccountCommitment, Log, AccountChange, MachineStatus,
@@ -39,21 +37,6 @@ macro_rules! system_address {
         Address::from(SYSTEM_ADDRESS.as_ref())
     }
 }
-
-/// Represents an Ethereum transaction.
-///
-/// ## About SYSTEM transaction
-///
-/// SYSTEM transaction in Ethereum is something that cannot be
-/// executed by the user, and is enforced by the blockchain rules. The
-/// SYSTEM transaction does not have a caller. When executed in EVM,
-/// however, the CALLER opcode would return
-/// 0xffffffffffffffffffffffffffffffffffffffff. As a result, when
-/// executing a message call or a contract creation, nonce are not
-/// changed. A SYSTEM transaction must have gas_price set to zero.
-/// Because the transaction reward is always zero, a SYSTEM
-/// transaction will also not invoke creation of the beneficiary
-/// address if it does not exist before.
 
 pub struct UntrustedTransaction {
     pub caller: AccountCommitment,
@@ -106,6 +89,21 @@ impl UntrustedTransaction {
         return Ok(valid);
     }
 }
+
+/// Represents an Ethereum transaction.
+///
+/// ## About SYSTEM transaction
+///
+/// SYSTEM transaction in Ethereum is something that cannot be
+/// executed by the user, and is enforced by the blockchain rules. The
+/// SYSTEM transaction does not have a caller. When executed in EVM,
+/// however, the CALLER opcode would return
+/// 0xffffffffffffffffffffffffffffffffffffffff. As a result, when
+/// executing a message call or a contract creation, nonce are not
+/// changed. A SYSTEM transaction must have gas_price set to zero.
+/// Because the transaction reward is always zero, a SYSTEM
+/// transaction will also not invoke creation of the beneficiary
+/// address if it does not exist before.
 
 #[derive(Debug, Clone)]
 pub struct ValidTransaction {
