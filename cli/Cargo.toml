@@ -13,6 +13,7 @@ name = "sputnikvm-cli"
 etcommon-bigint = "0.2"
 etcommon-hexutil = "0.2"
 sputnikvm = { version = "0.9", path = ".." }
+sputnikvm-network-classic = { path = "../network/classic" }
 gethrpc = { path = '../gethrpc' }
 clap = "2.22"
 serde_json = "0.9"

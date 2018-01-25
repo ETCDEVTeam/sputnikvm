@@ -561,7 +561,7 @@ mod tests {
             input: Rc::new(Vec::new()),
             nonce: U256::zero(),
         };
-        let mut vm = SeqTransactionVM::<MainnetEIP160Patch>::new(transaction, HeaderParams {
+        let mut vm = SeqTransactionVM::<EmbeddedPatch>::new(transaction, HeaderParams {
             beneficiary: Address::default(),
             timestamp: 0,
             number: U256::zero(),
@@ -598,7 +598,7 @@ mod tests {
             input: Rc::new(Vec::new()),
             nonce: U256::zero(),
         };
-        let mut vm = SeqTransactionVM::<MainnetEIP160Patch>::new(transaction, HeaderParams {
+        let mut vm = SeqTransactionVM::<EmbeddedPatch>::new(transaction, HeaderParams {
             beneficiary: Address::default(),
             timestamp: 0,
             number: U256::zero(),

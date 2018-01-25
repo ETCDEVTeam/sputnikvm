@@ -1,0 +1,10 @@
+[package]
+name = "sputnikvm-network-ubiq"
+version = "0.0.1"
+license = "Apache-2.0"
+authors = ["Wei Tang <hi@that.world>"]
+repository = "https://github.com/ethereumproject/sputnikvm"
+
+[dependencies]
+sputnikvm = { version = "0.9", path = "../.." }
+etcommon-bigint = { version = "0.2", default-features = false }

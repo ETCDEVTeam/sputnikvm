@@ -10,6 +10,7 @@ name = "regtests"
 
 [dependencies]
 sputnikvm = { path = '..' }
+sputnikvm-network-classic = { path = "../network/classic" }
 gethrpc = { path = '../gethrpc' }
 etcommon-block = "0.3"
 etcommon-bigint = "0.2"

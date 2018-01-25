@@ -5,6 +5,7 @@ extern crate serde_derive;
 #[macro_use]
 extern crate lazy_static;
 extern crate sputnikvm;
+extern crate sputnikvm_network_classic;
 extern crate sputnikvm_stateful;
 extern crate block;
 extern crate trie;
@@ -14,7 +15,8 @@ extern crate bigint;
 
 use sha3::{Digest, Keccak256};
 use bigint::{H256, U256, Address, Gas};
-use sputnikvm::{ValidTransaction, Storage, AccountChange, VM, SeqTransactionVM, HeaderParams, MainnetEIP160Patch, EIP160Patch, VMStatus, AccountPatch};
+use sputnikvm::{ValidTransaction, Storage, AccountChange, VM, SeqTransactionVM, HeaderParams, VMStatus, AccountPatch};
+use sputnikvm_network_classic::{MainnetEIP160Patch, EIP160Patch};
 use sputnikvm_stateful::{MemoryStateful, LiteralAccount};
 use block::TransactionAction;
 use trie::{Database, MemoryDatabase};

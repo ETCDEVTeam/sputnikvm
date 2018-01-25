@@ -22,6 +22,15 @@ experience of the community and learn from other proposed RFCs.
  * FFI, Protobuf and JSON interface
  * written in Rust, can be used as a binary, cargo crate or shared library  
 
+## Supported Networks
+
+* [Foundation](./network/foundation)
+* [Classic](./network/classic)
+* [Ellaism](./network/ellaism)
+* [Expanse](./network/expanse)
+* [Musicoin](./network/musicoin)
+* [Ubiq](./network/ubiq)
+
 ## Related projects
 
  * [SputnikVM Dev](https://github.com/ethereumproject/sputnikvm-dev) - SputnikVM instance for Smart Contract development, 
