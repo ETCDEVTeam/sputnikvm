@@ -200,6 +200,7 @@ fn main() {
             origin: caller,
             apprent_value: value,
             is_system: false,
+            is_static: false,
         };
 
         match matches.value_of("PATCH") {
