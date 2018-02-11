@@ -1,4 +1,3 @@
-use sputnikvm::Opcode;
 use std::collections::{HashMap, hash_map};
 use std::cmp::Ordering;
 use flame::Span;
@@ -33,7 +32,7 @@ impl Profiler {
     pub fn print_stats(&self) {
         println!("--- Profiler Stats ---");
         let mut occs: Vec<_> = self.occurances.iter().collect();
-        occs.sort_by(|&(k1, v1), &(k2, v2)| {
+        occs.sort_by(|&(_k1, v1), &(_k2, v2)| {
             match v1.1.partial_cmp(&v2.1) {
                 Some(val) => val,
                 None => Ordering::Equal,

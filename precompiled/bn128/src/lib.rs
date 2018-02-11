@@ -6,7 +6,7 @@ use std::rc::Rc;
 use bigint::{Gas, U256};
 
 use sputnikvm::Precompiled;
-use sputnikvm::errors::{OnChainError, RuntimeError, NotSupportedError};
+use sputnikvm::errors::{OnChainError, RuntimeError};
 
 pub static BN128_ADD_PRECOMPILED: Bn128AddPrecompiled = Bn128AddPrecompiled;
 

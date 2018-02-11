@@ -15,8 +15,8 @@ use std::fs::File;
 use profiler::Profiler;
 use bigint::{Gas, Address, U256, M256, H256};
 use hexutil::read_hex;
-use sputnikvm::{HeaderParams, Context, SeqTransactionVM, ValidTransaction, VM, Log, Patch,
-                AccountCommitment, AccountChange, RequireError, TransactionAction, VMStatus,
+use sputnikvm::{HeaderParams, Context, SeqTransactionVM, ValidTransaction, VM,
+                AccountCommitment, RequireError, TransactionAction, VMStatus,
                 SeqContextVM};
 use sputnikvm_network_classic::{MainnetFrontierPatch, MainnetHomesteadPatch, MainnetEIP150Patch, MainnetEIP160Patch};
 use gethrpc::{GethRPCClient, NormalGethRPCClient, RPCBlock};
@@ -30,7 +30,7 @@ fn from_rpc_block(block: &RPCBlock) -> HeaderParams {
         timestamp: U256::from_str(&block.timestamp).unwrap().as_u64(),
         number: U256::from_str(&block.number).unwrap(),
         difficulty: U256::from_str(&block.difficulty).unwrap(),
-        gas_limit: Gas::from_str(&block.gasLimit).unwrap(),
+        gas_limit: Gas::from_str(&block.gas_limit).unwrap(),
     }
 }
 
