@@ -8,4 +8,4 @@ repository = "https://github.com/ethereumproject/sputnikvm"
 [dependencies]
 sputnikvm = { version = "0.9", path = "../.." }
 etcommon-bigint = { version = "0.2", default-features = false }
-bn = { git = "https://github.com/paritytech/bn" }
+bn-plus = { version = "0.4" }

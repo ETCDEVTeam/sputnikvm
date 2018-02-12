@@ -38,6 +38,8 @@ macro_rules! system_address {
     }
 }
 
+#[derive(Debug, Clone)]
+/// Represents an untrusted Ethereum transaction.
 pub struct UntrustedTransaction {
     pub caller: AccountCommitment,
     pub gas_price: Gas,
@@ -48,6 +50,7 @@ pub struct UntrustedTransaction {
 }
 
 impl UntrustedTransaction {
+    /// Convert to a valid transaction.
     pub fn to_valid<P: Patch>(&self) -> Result<ValidTransaction, PreExecutionError> {
         let valid = {
             let (nonce, balance, address) = match self.caller.clone() {
@@ -90,6 +93,7 @@ impl UntrustedTransaction {
     }
 }
 
+#[derive(Debug, Clone)]
 /// Represents an Ethereum transaction.
 ///
 /// ## About SYSTEM transaction
@@ -104,8 +108,6 @@ impl UntrustedTransaction {
 /// Because the transaction reward is always zero, a SYSTEM
 /// transaction will also not invoke creation of the beneficiary
 /// address if it does not exist before.
-
-#[derive(Debug, Clone)]
 pub struct ValidTransaction {
     /// Caller of this transaction. If caller is None, then this is a
     /// SYSTEM transaction.
@@ -284,6 +286,8 @@ enum TransactionVMState<M, P: Patch> {
 pub struct TransactionVM<M, P: Patch>(TransactionVMState<M, P>);
 
 impl<M: Memory + Default, P: Patch> TransactionVM<M, P> {
+    /// Create a VM from an untrusted transaction. It can be any
+    /// transaction and the VM will return an error if it has errors.
     pub fn new_untrusted(transaction: UntrustedTransaction, block: HeaderParams) -> Result<Self, PreExecutionError> {
         let valid = transaction.to_valid::<P>()?;
         let mut vm = TransactionVM(TransactionVMState::Constructing {
