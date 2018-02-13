@@ -1,10 +1,11 @@
 [package]
 name = "sputnikvm-network-classic"
-version = "0.0.1"
+version = "0.10.0"
+description = "Ethereum Classic patches for SputnikVM."
 license = "Apache-2.0"
 authors = ["Wei Tang <hi@that.world>"]
 repository = "https://github.com/ethereumproject/sputnikvm"
 
 [dependencies]
-sputnikvm = { version = "0.9", path = "../.." }
+sputnikvm = { version = "0.10", path = "../.." }
 etcommon-bigint = { version = "0.2", default-features = false }

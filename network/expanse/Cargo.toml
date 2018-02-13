@@ -1,12 +1,13 @@
 [package]
 name = "sputnikvm-network-expanse"
-version = "0.0.1"
+version = "0.10.0"
+description = "Expanse patches for SputnikVM."
 license = "Apache-2.0"
 authors = ["Wei Tang <hi@that.world>"]
 repository = "https://github.com/ethereumproject/sputnikvm"
 
 [dependencies]
-sputnikvm = { version = "0.9", path = "../.." }
-sputnikvm-precompiled-bn128 = { path = "../../precompiled/bn128" }
-sputnikvm-precompiled-modexp = { path = "../../precompiled/modexp" }
+sputnikvm = { version = "0.10", path = "../.." }
+sputnikvm-precompiled-bn128 = { version = "0.10", path = "../../precompiled/bn128" }
+sputnikvm-precompiled-modexp = { version = "0.10", path = "../../precompiled/modexp" }
 etcommon-bigint = { version = "0.2", default-features = false }
