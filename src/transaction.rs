@@ -41,11 +41,17 @@ macro_rules! system_address {
 #[derive(Debug, Clone)]
 /// Represents an untrusted Ethereum transaction.
 pub struct UntrustedTransaction {
+    /// The caller. Must be attached with its commitment,
     pub caller: AccountCommitment,
+    /// Transaction gas price.
     pub gas_price: Gas,
+    /// Transaction gas limit.
     pub gas_limit: Gas,
+    /// Action CALL/CREATE of the transaction.
     pub action: TransactionAction,
+    /// Value sent with this transaction.
     pub value: U256,
+    /// Transaction input.
     pub input: Rc<Vec<u8>>,
 }
 
