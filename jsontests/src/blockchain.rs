@@ -75,6 +75,23 @@ impl JSONBlock {
         }
     }
 
+    pub fn new_genesis_block() -> Block {
+        Block::new("Genesis Block", vec![])
+    }
+
+    fn set_hash(&mut self) {
+        let header = [
+            &self.previous_hash[..],
+            &self.data[..],
+            &self.timestamp.to_string().as_bytes(),
+        ].concat();
+        self.hash = digest(&SHA256, &header[..]).as_ref().to_vec();
+    }
+
+    fn calculate_hash(&self) -> String {
+        unimplemented!()
+    }    
+  
     pub fn apply_account(&mut self, account: AccountChange) {
         match account {
             AccountChange::Full {
