@@ -89,9 +89,9 @@ impl JSONBlock {
         self.hash = digest(&SHA256, &header[..]).as_ref().to_vec();
     }
 
-    fn calculate_hash(&self) -> String {
-        unimplemented!()
-    }    
+    pub fn get_hash(&self) -> String {
+        byte_to_string(&self.hash)
+    }
   
     pub fn apply_account(&mut self, account: AccountChange) {
         match account {
