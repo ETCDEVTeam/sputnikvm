@@ -5,6 +5,7 @@ use sputnikvm::{Log, Context,
                 HeaderParams};
 
 use serde_json::Value;
+use self::ring::digest::{digest, SHA256};
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::rc::Rc;
@@ -75,8 +76,8 @@ impl JSONBlock {
         }
     }
 
-    pub fn new_genesis_block() -> Block {
-        Block::new("Genesis Block", vec![])
+    pub fn new_genesis_block() -> JSONBlock {
+        JSONBlock::new("Genesis Block", vec![])
     }
 
     fn set_hash(&mut self) {
