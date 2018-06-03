@@ -209,7 +209,8 @@ fn main() {
             Some("homestead") => Box::new(SeqContextVM::<MainnetHomesteadPatch>::new(context, block)),
             Some("eip150") => Box::new(SeqContextVM::<MainnetEIP150Patch>::new(context, block)),
             Some("eip160") => Box::new(SeqContextVM::<MainnetEIP160Patch>::new(context, block)),
-            _ => panic!("Unsupported patch."),
+            Some(x) => panic!("Unsupported patch name \"{}\"", x),
+            _ => panic!("patch needs a value"),
         }
     } else {
         let transaction = ValidTransaction {
@@ -235,6 +236,7 @@ fn main() {
             Some("homestead") => Box::new(SeqTransactionVM::<MainnetHomesteadPatch>::new(transaction, block)),
             Some("eip150") => Box::new(SeqTransactionVM::<MainnetEIP150Patch>::new(transaction, block)),
             Some("eip160") => Box::new(SeqTransactionVM::<MainnetEIP160Patch>::new(transaction, block)),
+            Some(x) => panic!("Unsupported patch name \"{}\"", x),
             _ => panic!("Unsupported patch."),
         }
     };
