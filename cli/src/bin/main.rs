@@ -15,14 +15,67 @@ use std::fs::File;
 use profiler::Profiler;
 use bigint::{Gas, Address, U256, M256, H256};
 use hexutil::read_hex;
-use sputnikvm::{HeaderParams, Context, SeqTransactionVM, ValidTransaction, VM,
-                AccountCommitment, RequireError, TransactionAction, VMStatus,
-                SeqContextVM};
-use sputnikvm_network_classic::{MainnetFrontierPatch, MainnetHomesteadPatch, MainnetEIP150Patch, MainnetEIP160Patch};
+use sputnikvm::{HeaderParams, Context, SeqTransactionVM, ValidTransaction, VM, AccountCommitment,
+                RequireError, TransactionAction, VMStatus, SeqContextVM};
+use sputnikvm_network_classic::{MainnetFrontierPatch, MainnetHomesteadPatch, MainnetEIP150Patch,
+                                MainnetEIP160Patch};
 use gethrpc::{GethRPCClient, NormalGethRPCClient, RPCBlock};
 use std::str::FromStr;
 use std::ops::DerefMut;
 use std::rc::Rc;
+use std::collections::HashMap;
+
+// Functions to create a particular kind of VM with a particular kind of patch.
+// Depending on the PATCH option provided, at most one of these will get called.
+type NewVmFn = fn(Context, HeaderParams) -> Box<VM>;
+
+fn frontier_vm_box_fn(context: Context, block: HeaderParams) -> Box<VM> {
+    return Box::new(SeqContextVM::<MainnetFrontierPatch>::new(context, block));
+}
+
+fn homestead_vm_box_fn(context: Context, block: HeaderParams) -> Box<VM> {
+    return Box::new(SeqContextVM::<MainnetHomesteadPatch>::new(context, block));
+}
+
+fn eip150_vm_box_fn(context: Context, block: HeaderParams) -> Box<VM> {
+    return Box::new(SeqContextVM::<MainnetEIP150Patch>::new(context, block));
+}
+
+fn eip160_vm_box_fn(context: Context, block: HeaderParams) -> Box<VM> {
+    return Box::new(SeqContextVM::<MainnetEIP160Patch>::new(context, block));
+}
+
+fn frontier_trans_box_fn(transaction: ValidTransaction, block: HeaderParams) -> Box<VM> {
+    return Box::new(SeqTransactionVM::<MainnetFrontierPatch>::new(
+        transaction,
+        block,
+    ));
+}
+
+// Functions to create a particular kind of transaction with a particular kind of patch.
+// Depending on the PATCH option provided, at most one of these will get called.
+type NewTransFn = fn(ValidTransaction, HeaderParams) -> Box<VM>;
+
+fn homestead_trans_box_fn(transaction: ValidTransaction, block: HeaderParams) -> Box<VM> {
+    return Box::new(SeqTransactionVM::<MainnetHomesteadPatch>::new(
+        transaction,
+        block,
+    ));
+}
+
+fn eip150_trans_box_fn(transaction: ValidTransaction, block: HeaderParams) -> Box<VM> {
+    return Box::new(SeqTransactionVM::<MainnetEIP150Patch>::new(
+        transaction,
+        block,
+    ));
+}
+
+fn eip160_trans_box_fn(transaction: ValidTransaction, block: HeaderParams) -> Box<VM> {
+    return Box::new(SeqTransactionVM::<MainnetEIP160Patch>::new(
+        transaction,
+        block,
+    ));
+}
 
 fn from_rpc_block(block: &RPCBlock) -> HeaderParams {
     HeaderParams {
@@ -36,23 +89,25 @@ fn from_rpc_block(block: &RPCBlock) -> HeaderParams {
 
 fn handle_step_without_rpc(vm: &mut VM) {
     match vm.step() {
-        Ok(()) => {},
+        Ok(()) => {}
         Err(RequireError::Account(address)) => {
-            vm.commit_account(AccountCommitment::Nonexist(address)).unwrap();
-        },
+            vm.commit_account(AccountCommitment::Nonexist(address))
+                .unwrap();
+        }
         Err(RequireError::AccountStorage(address, index)) => {
             vm.commit_account(AccountCommitment::Storage {
                 address: address,
                 index: index,
                 value: M256::zero(),
             }).unwrap();
-        },
+        }
         Err(RequireError::AccountCode(address)) => {
-            vm.commit_account(AccountCommitment::Nonexist(address)).unwrap();
-        },
+            vm.commit_account(AccountCommitment::Nonexist(address))
+                .unwrap();
+        }
         Err(RequireError::Blockhash(number)) => {
             vm.commit_blockhash(number, H256::default()).unwrap();
-        },
+        }
     }
 }
 
@@ -61,11 +116,10 @@ fn profile_fire_without_rpc(vm: &mut VM) {
         match vm.status() {
             VMStatus::Running => {
                 let opcode = vm.peek_opcode();
-                flame::span_of(format!("{:?}", opcode), || {
-                    handle_step_without_rpc(vm)
-                });
-            },
-            VMStatus::ExitedOk | VMStatus::ExitedErr(_) |
+                flame::span_of(format!("{:?}", opcode), || handle_step_without_rpc(vm));
+            }
+            VMStatus::ExitedOk |
+            VMStatus::ExitedErr(_) |
             VMStatus::ExitedNotSupported(_) => return,
         }
     }
@@ -76,21 +130,23 @@ fn handle_fire_without_rpc(vm: &mut VM) {
         match vm.fire() {
             Ok(()) => break,
             Err(RequireError::Account(address)) => {
-                vm.commit_account(AccountCommitment::Nonexist(address)).unwrap();
-            },
+                vm.commit_account(AccountCommitment::Nonexist(address))
+                    .unwrap();
+            }
             Err(RequireError::AccountStorage(address, index)) => {
                 vm.commit_account(AccountCommitment::Storage {
                     address: address,
                     index: index,
                     value: M256::zero(),
                 }).unwrap();
-            },
+            }
             Err(RequireError::AccountCode(address)) => {
-                vm.commit_account(AccountCommitment::Nonexist(address)).unwrap();
-            },
+                vm.commit_account(AccountCommitment::Nonexist(address))
+                    .unwrap();
+            }
             Err(RequireError::Blockhash(number)) => {
                 vm.commit_blockhash(number, H256::default()).unwrap();
-            },
+            }
         }
     }
 }
@@ -100,14 +156,23 @@ fn handle_fire_with_rpc<T: GethRPCClient>(client: &mut T, vm: &mut VM, block_num
         match vm.fire() {
             Ok(()) => break,
             Err(RequireError::Account(address)) => {
-                let nonce = U256::from_str(&client.get_transaction_count(&format!("0x{:x}", address),
-                                                                         &block_number)).unwrap();
-                let balance = U256::from_str(&client.get_balance(&format!("0x{:x}", address),
-                                                                 &block_number)).unwrap();
-                let code = read_hex(&client.get_code(&format!("0x{:x}", address),
-                                                     &block_number)).unwrap();
-                if !client.account_exist(&format!("0x{:x}", address), U256::from_str(&block_number).unwrap().as_usize()) {
-                    vm.commit_account(AccountCommitment::Nonexist(address)).unwrap();
+                let nonce = U256::from_str(&client.get_transaction_count(
+                    &format!("0x{:x}", address),
+                    &block_number,
+                )).unwrap();
+                let balance = U256::from_str(&client.get_balance(
+                    &format!("0x{:x}", address),
+                    &block_number,
+                )).unwrap();
+                let code = read_hex(&client.get_code(&format!("0x{:x}", address), &block_number))
+                    .unwrap();
+                if !client.account_exist(
+                    &format!("0x{:x}", address),
+                    U256::from_str(&block_number).unwrap().as_usize(),
+                )
+                {
+                    vm.commit_account(AccountCommitment::Nonexist(address))
+                        .unwrap();
                 } else {
                     vm.commit_account(AccountCommitment::Full {
                         nonce: nonce,
@@ -116,32 +181,50 @@ fn handle_fire_with_rpc<T: GethRPCClient>(client: &mut T, vm: &mut VM, block_num
                         code: Rc::new(code),
                     }).unwrap();
                 }
-            },
+            }
             Err(RequireError::AccountStorage(address, index)) => {
-                let value = M256::from_str(&client.get_storage_at(&format!("0x{:x}", address),
-                                                                  &format!("0x{:x}", index),
-                                                                  &block_number)).unwrap();
+                let value = M256::from_str(&client.get_storage_at(
+                    &format!("0x{:x}", address),
+                    &format!("0x{:x}", index),
+                    &block_number,
+                )).unwrap();
                 vm.commit_account(AccountCommitment::Storage {
                     address: address,
                     index: index,
                     value: value,
                 }).unwrap();
-            },
+            }
             Err(RequireError::AccountCode(address)) => {
-                let code = read_hex(&client.get_code(&format!("0x{:x}", address),
-                                                     &block_number)).unwrap();
+                let code = read_hex(&client.get_code(&format!("0x{:x}", address), &block_number))
+                    .unwrap();
                 vm.commit_account(AccountCommitment::Code {
                     address: address,
                     code: Rc::new(code),
                 }).unwrap();
-            },
+            }
             Err(RequireError::Blockhash(number)) => {
-                let hash = H256::from_str(&client.get_block_by_number(&format!("0x{:x}", number))
-                    .hash).unwrap();
+                let hash = H256::from_str(
+                    &client.get_block_by_number(&format!("0x{:x}", number)).hash,
+                ).unwrap();
                 vm.commit_blockhash(number, hash).unwrap();
-            },
+            }
         }
     }
+}
+
+fn print_valid_patches(patch: &str, patch_names: Vec<&str>) {
+    println!("Unsupported patch name: '{}'", patch);
+    print!("Supported patch names are: ");
+    let mut first_time = true;
+    for patch_name in patch_names {
+        if first_time {
+            first_time = false;
+            print!("'{}'", patch_name);
+        } else {
+            print!(", '{}'", patch_name);
+        }
+    }
+    println!("");
 }
 
 fn main() {
@@ -166,8 +249,12 @@ fn main() {
 
     let code = read_hex(matches.value_of("CODE").unwrap()).unwrap();
     let data = read_hex(matches.value_of("DATA").unwrap_or("")).unwrap();
-    let caller = Address::from_str(matches.value_of("CALLER").unwrap_or("0x0000000000000000000000000000000000000000")).unwrap();
-    let address = Address::from_str(matches.value_of("ADDRESS").unwrap_or("0x0000000000000000000000000000000000000000")).unwrap();
+    let caller = Address::from_str(matches.value_of("CALLER").unwrap_or(
+        "0x0000000000000000000000000000000000000000",
+    )).unwrap();
+    let address = Address::from_str(matches.value_of("ADDRESS").unwrap_or(
+        "0x0000000000000000000000000000000000000000",
+    )).unwrap();
     let value = U256::from_str(matches.value_of("VALUE").unwrap_or("0x0")).unwrap();
     let gas_limit = Gas::from_str(matches.value_of("GAS_LIMIT").unwrap_or("0x2540be400")).unwrap();
     let gas_price = Gas::from_str(matches.value_of("GAS_PRICE").unwrap_or("0x0")).unwrap();
@@ -195,7 +282,11 @@ fn main() {
 
     let mut vm: Box<VM> = if matches.is_present("CODE") {
         let context = Context {
-            address, caller, gas_limit, gas_price, value,
+            address,
+            caller,
+            gas_limit,
+            gas_price,
+            value,
             code: Rc::new(code),
             data: Rc::new(data),
             origin: caller,
@@ -204,24 +295,42 @@ fn main() {
             is_static: false,
         };
 
+        let patch_opts: HashMap<&str, NewVmFn> = [
+            ("frontier", frontier_vm_box_fn as NewVmFn),
+            ("homestead", homestead_vm_box_fn),
+            ("eip150", eip150_vm_box_fn),
+            ("eip160", eip160_vm_box_fn),
+        ].iter()
+            .cloned()
+            .collect();
+
         match matches.value_of("PATCH") {
-            Some("frontier") => Box::new(SeqContextVM::<MainnetFrontierPatch>::new(context, block)),
-            Some("homestead") => Box::new(SeqContextVM::<MainnetHomesteadPatch>::new(context, block)),
-            Some("eip150") => Box::new(SeqContextVM::<MainnetEIP150Patch>::new(context, block)),
-            Some("eip160") => Box::new(SeqContextVM::<MainnetEIP160Patch>::new(context, block)),
-            Some(x) => panic!("Unsupported patch name \"{}\"", x),
-            _ => panic!("patch needs a value"),
+            Some(patch) => {
+                match patch_opts.get(patch) {
+                    Some(patch_fn) => patch_fn(context, block),
+                    None => {
+                        let patch_names: Vec<&str> = patch_opts.keys().cloned().collect();
+                        print_valid_patches(patch, patch_names);
+                        panic!("");
+                    }
+                }
+            }
+            _ => panic!("Need a patch name."),
         }
     } else {
         let transaction = ValidTransaction {
             caller: Some(caller),
-            value, gas_limit, gas_price,
+            value,
+            gas_limit,
+            gas_price,
             input: Rc::new(data),
             nonce: match client {
                 Some(ref mut client) => {
-                    U256::from_str(&client.get_transaction_count(&format!("0x{:x}", caller),
-                                                                 &block_number)).unwrap()
-                },
+                    U256::from_str(&client.get_transaction_count(
+                        &format!("0x{:x}", caller),
+                        &block_number,
+                    )).unwrap()
+                }
                 None => U256::zero(),
             },
             action: if is_create {
@@ -231,24 +340,40 @@ fn main() {
             },
         };
 
+        let patch_opts: HashMap<&str, NewTransFn> =
+            [
+                ("frontier", frontier_trans_box_fn as NewTransFn),
+                ("homestead", homestead_trans_box_fn),
+                ("eip150", eip150_trans_box_fn),
+                ("eip160", eip160_trans_box_fn),
+            ].iter()
+                .cloned()
+                .collect();
+
         match matches.value_of("PATCH") {
-            Some("frontier") => Box::new(SeqTransactionVM::<MainnetFrontierPatch>::new(transaction, block)),
-            Some("homestead") => Box::new(SeqTransactionVM::<MainnetHomesteadPatch>::new(transaction, block)),
-            Some("eip150") => Box::new(SeqTransactionVM::<MainnetEIP150Patch>::new(transaction, block)),
-            Some("eip160") => Box::new(SeqTransactionVM::<MainnetEIP160Patch>::new(transaction, block)),
-            Some(x) => panic!("Unsupported patch name \"{}\"", x),
-            _ => panic!("Unsupported patch."),
+            Some(patch) => {
+                match patch_opts.get(patch) {
+                    Some(patch_fn) => patch_fn(transaction, block),
+                    None => {
+                        let patch_names: Vec<&str> = patch_opts.keys().cloned().collect();
+                        print_valid_patches(patch, patch_names);
+                        panic!("");
+                    }
+                }
+            }
+            _ => panic!("Need a patch name."),
         }
     };
     match client {
         Some(ref mut client) => {
             handle_fire_with_rpc(client, vm.deref_mut(), block_number);
-        },
+        }
         None => {
             if matches.is_present("PROFILE") {
                 profile_fire_without_rpc(vm.deref_mut());
                 if matches.is_present("PROFILE_DUMP") {
-                    flame::dump_html(&mut File::create(matches.value_of("PROFILE_DUMP").unwrap()).unwrap()).unwrap();
+                    flame::dump_html(&mut File::create(matches.value_of("PROFILE_DUMP").unwrap())
+                        .unwrap()).unwrap();
                 }
                 let mut profiler = Profiler::default();
                 for span in flame::spans() {
@@ -258,7 +383,7 @@ fn main() {
             } else {
                 handle_fire_without_rpc(vm.deref_mut());
             }
-        },
+        }
     }
 
     println!("VM returned: {:?}", vm.status());
