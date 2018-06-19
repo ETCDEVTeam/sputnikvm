@@ -212,6 +212,13 @@ fn handle_fire_with_rpc<T: GethRPCClient>(client: &mut T, vm: &mut VM, block_num
     }
 }
 
+// Note: to turn the below into something that takes an iterator, rather than a vector
+// of &str, we would need to use generics.
+//
+// See https://stackoverflow.com/questions/34969902/
+//  how-to-write-a-rust-function-that-takes-an-iterator
+// Doing this might be slightly more efficient and would avoid the duplicate:
+//   let patch_names: Vec<&str> .... setup in the call
 fn print_valid_patches(patch: &str, patch_names: Vec<&str>) {
     println!("Unsupported patch name: '{}'", patch);
     print!("Supported patch names are: ");
