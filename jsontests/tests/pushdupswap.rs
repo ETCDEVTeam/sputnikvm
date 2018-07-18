@@ -86,3 +86,10 @@ lazy_static! {
 #[test] fn swap8() { assert_eq!(test_transaction("swap8", &TESTS["swap8"], true), true); }
 #[test] fn swap9() { assert_eq!(test_transaction("swap9", &TESTS["swap9"], true), true); }
 #[test] fn swapjump1() { assert_eq!(test_transaction("swapjump1", &TESTS["swapjump1"], true), true); }
+
+#[test] fn all_tests_included() {
+    for (testname, _) in TESTS.as_object().unwrap().iter() {
+        println!("#[test] fn {}() {{ assert_eq!(test_transaction({:?}, &TESTS[{:?}], true), true); }}", testname, testname, testname)
+    }
+    assert_eq!(TESTS.as_object().unwrap().len(), 73);
+}

@@ -101,7 +101,6 @@ lazy_static! {
 #[test] fn jump1() { assert_eq!(test_transaction("jump1", &TESTS["jump1"], true), true); }
 #[test] fn jumpAfterStop() { assert_eq!(test_transaction("jumpAfterStop", &TESTS["jumpAfterStop"], true), true); }
 #[test] fn jumpDynamicJumpSameDest() { assert_eq!(test_transaction("jumpDynamicJumpSameDest", &TESTS["jumpDynamicJumpSameDest"], true), true); }
-#[test] fn jumpHigh() { assert_eq!(test_transaction("jumpHigh", &TESTS["jumpHigh"], true), true); }
 #[test] fn jumpInsidePushWithJumpDest() { assert_eq!(test_transaction("jumpInsidePushWithJumpDest", &TESTS["jumpInsidePushWithJumpDest"], true), true); }
 #[test] fn jumpInsidePushWithoutJumpDest() { assert_eq!(test_transaction("jumpInsidePushWithoutJumpDest", &TESTS["jumpInsidePushWithoutJumpDest"], true), true); }
 #[test] fn jumpOntoJump() { assert_eq!(test_transaction("jumpOntoJump", &TESTS["jumpOntoJump"], true), true); }
@@ -158,3 +157,10 @@ lazy_static! {
 #[test] fn stackjump1() { assert_eq!(test_transaction("stackjump1", &TESTS["stackjump1"], true), true); }
 #[test] fn swapAt52becameMstore() { assert_eq!(test_transaction("swapAt52becameMstore", &TESTS["swapAt52becameMstore"], true), true); }
 #[test] fn when() { assert_eq!(test_transaction("when", &TESTS["when"], true), true); }
+
+#[test] fn all_tests_included() {
+    for (testname, _) in TESTS.as_object().unwrap().iter() {
+        println!("#[test] fn {}() {{ assert_eq!(test_transaction({:?}, &TESTS[{:?}], true), true); }}", testname, testname, testname)
+    }
+    assert_eq!(TESTS.as_object().unwrap().len(), 144);
+}

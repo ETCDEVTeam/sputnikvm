@@ -73,3 +73,4 @@ lazy_static! {
 #[test] fn xor3() { assert_eq!(test_transaction("xor3", &TESTS["xor3"], true), true); }
 #[test] fn xor4() { assert_eq!(test_transaction("xor4", &TESTS["xor4"], true), true); }
 #[test] fn xor5() { assert_eq!(test_transaction("xor5", &TESTS["xor5"], true), true); }
+#[test] fn all_tests_included() { assert_eq!(TESTS.as_object().unwrap().len(), 60); }

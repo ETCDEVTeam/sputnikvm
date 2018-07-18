@@ -59,3 +59,10 @@ lazy_static! {
 #[test] fn log4_nonEmptyMem_logMemSize1() { assert_eq!(test_transaction("log4_nonEmptyMem_logMemSize1", &TESTS["log4_nonEmptyMem_logMemSize1"], true), true); }
 #[test] fn log4_nonEmptyMem_logMemSize1_logMemStart31() { assert_eq!(test_transaction("log4_nonEmptyMem_logMemSize1_logMemStart31", &TESTS["log4_nonEmptyMem_logMemSize1_logMemStart31"], true), true); }
 #[test] fn log_2logs() { assert_eq!(test_transaction("log_2logs", &TESTS["log_2logs"], true), true); }
+
+#[test] fn all_tests_included() {
+    for (testname, _) in TESTS.as_object().unwrap().iter() {
+        println!("#[test] fn {}() {{ assert_eq!(test_transaction({:?}, &TESTS[{:?}], true), true); }}", testname, testname, testname)
+    }
+    assert_eq!(TESTS.as_object().unwrap().len(), 46);
+}

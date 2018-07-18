@@ -25,3 +25,4 @@ lazy_static! {
 #[test] fn gaslimit() { assert_eq!(test_transaction("gaslimit", &TESTS["gaslimit"], true), true); }
 #[test] fn number() { assert_eq!(test_transaction("number", &TESTS["number"], true), true); }
 #[test] fn timestamp() { assert_eq!(test_transaction("timestamp", &TESTS["timestamp"], true), true); }
+#[test] fn all_tests_included() { assert_eq!(TESTS.as_object().unwrap().len(), 12); }
