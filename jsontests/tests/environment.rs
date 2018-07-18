@@ -54,6 +54,7 @@ lazy_static! {
 #[test] fn codecopyZeroMemExpansion() { assert_eq!(test_transaction("codecopyZeroMemExpansion", &TESTS["codecopyZeroMemExpansion"], true), true); }
 #[test] fn codecopy_DataIndexTooHigh() { assert_eq!(test_transaction("codecopy_DataIndexTooHigh", &TESTS["codecopy_DataIndexTooHigh"], true), true); }
 #[test] fn codesize() { assert_eq!(test_transaction("codesize", &TESTS["codesize"], true), true); }
+#[test] fn env1() { assert_eq!(test_transaction("env1", &TESTS["env1"], true), true); }
 #[test] fn extcodecopy0() { assert_eq!(test_transaction("extcodecopy0", &TESTS["extcodecopy0"], true), true); }
 #[test] fn extcodecopy0AddressTooBigLeft() { assert_eq!(test_transaction("extcodecopy0AddressTooBigLeft", &TESTS["extcodecopy0AddressTooBigLeft"], true), true); }
 #[test] fn extcodecopy0AddressTooBigRight() { assert_eq!(test_transaction("extcodecopy0AddressTooBigRight", &TESTS["extcodecopy0AddressTooBigRight"], true), true); }
@@ -64,3 +65,10 @@ lazy_static! {
 #[test] fn extcodesizeUnderFlow() { assert_eq!(test_transaction("extcodesizeUnderFlow", &TESTS["extcodesizeUnderFlow"], true), true); }
 #[test] fn gasprice() { assert_eq!(test_transaction("gasprice", &TESTS["gasprice"], true), true); }
 #[test] fn origin() { assert_eq!(test_transaction("origin", &TESTS["origin"], true), true); }
+
+#[test] fn all_tests_included() {
+    for (testname, _) in TESTS.as_object().unwrap().iter() {
+        println!("#[test] fn {}() {{ assert_eq!(test_transaction({:?}, &TESTS[{:?}], true), true); }}", testname, testname, testname)
+    }
+    assert_eq!(TESTS.as_object().unwrap().len(), 52);
+}

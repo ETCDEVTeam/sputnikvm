@@ -31,3 +31,10 @@ lazy_static! {
 #[test] fn sha3_memSizeQuadraticCost64() { assert_eq!(test_transaction("sha3_memSizeQuadraticCost64", &TESTS["sha3_memSizeQuadraticCost64"], true), true); }
 #[test] fn sha3_memSizeQuadraticCost64_2() { assert_eq!(test_transaction("sha3_memSizeQuadraticCost64_2", &TESTS["sha3_memSizeQuadraticCost64_2"], true), true); }
 #[test] fn sha3_memSizeQuadraticCost65() { assert_eq!(test_transaction("sha3_memSizeQuadraticCost65", &TESTS["sha3_memSizeQuadraticCost65"], true), true); }
+
+#[test] fn all_tests_included() {
+    for (testname, _) in TESTS.as_object().unwrap().iter() {
+        println!("#[test] fn {}() {{ assert_eq!(test_transaction({:?}, &TESTS[{:?}], true), true); }}", testname, testname, testname)
+    }
+    assert_eq!(TESTS.as_object().unwrap().len(), 18);
+}

@@ -208,3 +208,4 @@ lazy_static! {
 #[test] fn sub2() { assert_eq!(test_transaction("sub2", &TESTS["sub2"], true), true); }
 #[test] fn sub3() { assert_eq!(test_transaction("sub3", &TESTS["sub3"], true), true); }
 #[test] fn sub4() { assert_eq!(test_transaction("sub4", &TESTS["sub4"], true), true); }
+#[test] fn all_tests_included() { assert_eq!(TESTS.as_object().unwrap().len(), 195); }

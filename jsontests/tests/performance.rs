@@ -19,3 +19,4 @@ lazy_static! {
 #[test] fn fibonacci10() { assert_eq!(test_transaction("fibonacci10", &TESTS["fibonacci10"], true), true); }
 #[test] fn fibonacci16() { assert_eq!(test_transaction("fibonacci16", &TESTS["fibonacci16"], true), true); }
 #[test] fn manyFunctions100() { assert_eq!(test_transaction("manyFunctions100", &TESTS["manyFunctions100"], true), true); }
+#[test] fn all_tests_included() { assert_eq!(TESTS.as_object().unwrap().len(), 6); }
