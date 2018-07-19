@@ -87,8 +87,8 @@ pub fn test_machine(v: &Value, machine: &SeqContextVM<VMTestPatch>, block: &JSON
                     Some(Address::from_str(destination).unwrap())
                 }
             };
-            let gas_limit = Gas::from_str(callcreate["gasLimit"].as_str().unwrap()).unwrap();
-            let value = U256::from_str(callcreate["value"].as_str().unwrap()).unwrap();
+            let gas_limit = Gas::from(read_u256(callcreate["gasLimit"].as_str().unwrap()));
+            let value = read_u256(callcreate["value"].as_str().unwrap());
 
             if i >= history.len() {
                 if debug {
@@ -122,8 +122,8 @@ pub fn test_machine(v: &Value, machine: &SeqContextVM<VMTestPatch>, block: &JSON
     let out = v["out"].as_str();
     let gas = v["gas"].as_str();
 
-    if out.is_some() {
-        let out = read_hex(out.unwrap()).unwrap();
+    if let Some(out) = out {
+        let out = read_hex(out).unwrap();
         let out_ref: &[u8] = out.as_ref();
         if machine.out() != out_ref {
             if debug {
@@ -135,8 +135,8 @@ pub fn test_machine(v: &Value, machine: &SeqContextVM<VMTestPatch>, block: &JSON
         }
     }
 
-    if gas.is_some() {
-        let gas = Gas::from_str(gas.unwrap()).unwrap();
+    if let Some(gas) = gas {
+        let gas = Gas::from(read_u256(gas));
         if machine.available_gas() != gas {
             if debug {
                 print!("\n");
@@ -152,7 +152,7 @@ pub fn test_machine(v: &Value, machine: &SeqContextVM<VMTestPatch>, block: &JSON
 
     for (address, data) in post_addresses.as_object().unwrap() {
         let address = Address::from_str(address.as_str()).unwrap();
-        let balance = U256::from_str(data["balance"].as_str().unwrap()).unwrap();
+        let balance = read_u256(data["balance"].as_str().unwrap());
         let code = read_hex(data["code"].as_str().unwrap()).unwrap();
         let code_ref: &[u8] = code.as_ref();
 
@@ -177,7 +177,7 @@ pub fn test_machine(v: &Value, machine: &SeqContextVM<VMTestPatch>, block: &JSON
 
         let storage = data["storage"].as_object().unwrap();
         for (index, value) in storage {
-            let index = U256::from_str(index.as_str()).unwrap();
+            let index = read_u256(index.as_str());
             let value = M256::from_str(value.as_str().unwrap()).unwrap();
             if value != block.account_storage(address, index) {
                 if debug {
@@ -200,7 +200,7 @@ pub fn test_machine(v: &Value, machine: &SeqContextVM<VMTestPatch>, block: &JSON
 
             let storage = data["storage"].as_object().unwrap();
             for (index, value) in storage {
-                let index = U256::from_str(index.as_str()).unwrap();
+                let index = read_u256(index.as_str());
                 let value = M256::from_str(value.as_str().unwrap()).unwrap();
                 if value != block.account_storage(address, index) {
                     if debug {
@@ -284,5 +284,15 @@ pub fn test_transaction(_name: &str, v: &Value, debug: bool) -> bool {
         } else {
             return false;
         }
+    }
+}
+
+/// Read U256 number exactly the way go big.Int parses strings
+/// except for base 2 and 8 which are not used in tests
+pub fn read_u256(number: &str) -> U256 {
+    if number.starts_with("0x") {
+        U256::from_str(number).unwrap()
+    } else {
+        U256::from_dec_str(number).unwrap()
     }
 }
