@@ -17,8 +17,9 @@ lazy_static! {
 fn inputLimits() {
     for (name, value) in TESTS.as_object().unwrap().iter() {
         print!("\t{} ... ", name);
-        if !test_transaction(name, value, true) {
-            panic!("test inputLimits::{} failed");
+        match test_transaction(name, value, true) {
+            Ok(false) => panic!("test inputLimits::{} failed", name),
+            _ => (),
         }
     }
 }

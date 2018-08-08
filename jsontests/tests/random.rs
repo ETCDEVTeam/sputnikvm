@@ -30,7 +30,7 @@ fn ramdomTests() {
         let tests: HashMap<String, serde_json::Value> = serde_json::from_str(&*data).unwrap();
         for (name, value) in &tests {
             println!("\t test {} ... ", name);
-            assert_eq!(test_transaction(name, value, true), true);
+            assert_eq!(test_transaction(name, value, true), Ok(true));
         }
     }
 }
