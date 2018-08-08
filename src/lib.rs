@@ -121,6 +121,9 @@ extern crate ripemd160;
 extern crate sha2;
 extern crate digest;
 
+#[macro_use]
+extern crate log;
+
 #[cfg(feature = "c-secp256k1")]
 extern crate secp256k1;
 
@@ -307,6 +310,7 @@ impl<M: Memory + Default, P: Patch> ContextVM<M, P> {
     /// Add a new context history hook.
     pub fn add_context_history_hook<F: 'static + Fn(&Context)>(&mut self, f: F) {
         self.runtime.context_history_hooks.push(Box::new(f));
+        debug!("registered a new history hook");
     }
 }
 
@@ -315,11 +319,14 @@ impl<M: Memory + Default, P: Patch> VM for ContextVM<M, P> {
         for machine in &mut self.machines {
             machine.commit_account(commitment.clone())?;
         }
+        debug!("committed account info: {:?}", commitment);
         Ok(())
     }
 
     fn commit_blockhash(&mut self, number: U256, hash: H256) -> Result<(), CommitError> {
-        self.runtime.blockhash_state.commit(number, hash)
+        self.runtime.blockhash_state.commit(number, hash)?;
+        debug!("committed blockhash number {}: {}", number, hash);
+        Ok(())
     }
 
     fn status(&self) -> VMStatus {
@@ -406,6 +413,7 @@ impl<M: Memory + Default, P: Patch> VM for ContextVM<M, P> {
 
     fn fire(&mut self) -> Result<(), RequireError> {
         loop {
+            debug!("machines status: {:?}", self.machines.iter().map(Machine::status).collect::<Vec<_>>());
             match self.status() {
                 VMStatus::Running => self.step()?,
                 VMStatus::ExitedOk | VMStatus::ExitedErr(_) |

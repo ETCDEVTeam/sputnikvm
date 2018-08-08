@@ -2,6 +2,7 @@ extern crate sputnikvm;
 extern crate serde_json;
 extern crate hexutil;
 extern crate bigint;
+extern crate env_logger;
 
 mod blockchain;
 
@@ -253,6 +254,8 @@ fn is_ok(status: VMStatus) -> bool {
 }
 
 pub fn test_transaction(_name: &str, v: &Value, debug: bool) -> bool {
+    let _ = env_logger::try_init();
+
     let mut block = create_block(v);
     let history: Arc<Mutex<Vec<Context>>> = Arc::new(Mutex::new(Vec::new()));
     let history_closure = history.clone();
