@@ -150,7 +150,7 @@ use alloc::Vec;
 #[cfg(not(feature = "std"))] use core::cmp::min;
 use bigint::{U256, H256, Gas, Address};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 /// VM Status
 pub enum VMStatus {
     /// A running VM.

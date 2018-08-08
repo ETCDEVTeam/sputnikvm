@@ -331,8 +331,8 @@ impl<M: Memory + Default, P: Patch> Machine<M, P> {
     /// runtime will not be affected.
     pub fn step(&mut self, runtime: &Runtime) -> Result<(), RequireError> {
         debug!("VM step started");
-        debug!("Code: {:?}", &self.state.context.code[self.state.position..]);
-        debug!("Stack: {:#?}", self.state.stack);
+        debug!("Code: {:x?}", &self.state.context.code[self.state.position..]);
+        debug!("Stack: {:#x?}", self.state.stack);
 
         struct Precheck {
             position: usize,
@@ -455,11 +455,11 @@ impl<M: Memory + Default, P: Patch> Machine<M, P> {
         };
 
         trace!("position:    {}", position);
-        trace!("memory_cost: {:?}", memory_cost);
-        trace!("gas_cost:    {:?}", gas_cost);
-        trace!("gas_stipend: {:?}", gas_stipend);
-        trace!("gas_refund:  {:?}", gas_refund);
-        trace!("after_gas:   {:?}", after_gas);
+        trace!("memory_cost: {:x?}", memory_cost);
+        trace!("gas_cost:    {:x?}", gas_cost);
+        trace!("gas_stipend: {:x?}", gas_stipend);
+        trace!("gas_refund:  {:x?}", gas_refund);
+        trace!("after_gas:   {:x?}", after_gas);
 
         let instruction = PCMut::<P>::new(&self.state.context.code,
                                           &self.state.valids, &mut self.state.position)
@@ -473,8 +473,8 @@ impl<M: Memory + Default, P: Patch> Machine<M, P> {
         self.state.refunded_gas = self.state.refunded_gas + gas_refund;
 
         debug!("{:?} => {:?}", instruction, result);
-        debug!("gas used: {:?}", self.state.total_used_gas());
-        debug!("gas left: {:?}", self.state.available_gas());
+        debug!("gas used: {:x?}", self.state.total_used_gas());
+        debug!("gas left: {:x?}", self.state.available_gas());
 
         match result {
             None => Ok(()),

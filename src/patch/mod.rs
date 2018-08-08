@@ -121,7 +121,7 @@ impl Patch for VMTestPatch {
     fn force_code_deposit() -> bool { true }
     fn has_delegate_call() -> bool { false }
     fn has_static_call() -> bool { false }
-    fn has_revert() -> bool { false }
+    fn has_revert() -> bool { true }
     fn has_return_data() -> bool { false }
     fn err_on_call_with_more_gas() -> bool { true }
     fn call_create_l64_after_gas() -> bool { false }

@@ -253,7 +253,7 @@ fn is_ok(status: VMStatus) -> bool {
     }
 }
 
-pub fn test_transaction(_name: &str, v: &Value, debug: bool) -> bool {
+pub fn test_transaction(_name: &str, v: &Value, debug: bool) -> Result<bool, VMStatus> {
     let _ = env_logger::try_init();
 
     let mut block = create_block(v);
@@ -274,18 +274,18 @@ pub fn test_transaction(_name: &str, v: &Value, debug: bool) -> bool {
     if out.is_some() {
         if is_ok(machine.status()) {
             if test_machine(v, &machine, &block, &history.lock().unwrap(), debug) {
-                return true;
+                return Ok(true);
             } else {
-                return false;
+                return Ok(false);
             }
         } else {
-            return false;
+            return Err(machine.status());
         }
     } else {
         if !is_ok(machine.status()) {
-            return true;
+            return Ok(true);
         } else {
-            return false;
+            return Ok(false);
         }
     }
 }
