@@ -2,10 +2,7 @@
 
 extern crate jsontests;
 extern crate serde_json;
-#[macro_use]
-extern crate lazy_static;
 
-use serde_json::Value;
 use jsontests::test_transaction;
 
 use std::fs;
