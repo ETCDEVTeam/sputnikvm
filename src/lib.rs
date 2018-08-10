@@ -395,7 +395,10 @@ impl<M: Memory + Default, P: Patch> VM for ContextVM<M, P> {
 
     fn fire(&mut self) -> Result<(), RequireError> {
         loop {
-            debug!("machines status: {:?}", self.machines.iter().map(Machine::status).collect::<Vec<_>>());
+            debug!("machines status:");
+            for (n, machine) in self.machines.iter().enumerate() {
+               debug!("Machine {}: {:x?}", n, machine.status());
+            }
             match self.status() {
                 VMStatus::Running => self.step()?,
                 VMStatus::ExitedOk | VMStatus::ExitedErr(_) |
