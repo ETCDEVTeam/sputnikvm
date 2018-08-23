@@ -1,25 +1,17 @@
 #![allow(non_snake_case)]
+#![allow(unused)]
 
-extern crate jsontests;
-extern crate serde_json;
 #[macro_use]
-extern crate lazy_static;
+extern crate jsontests_derive;
+extern crate jsontests;
 
-use serde_json::Value;
-use jsontests::test_transaction;
+#[derive(JsonTests)]
+#[directory = "jsontests/res/files/vmInputLimits"]
+#[test_with = "jsontests::util::run_test"]
+struct InputLimits;
 
-lazy_static! {
-    static ref TESTS: Value =
-        serde_json::from_str(include_str!("../res/files/vmInputLimits.json")).unwrap();
-}
+#[derive(JsonTests)]
+#[directory = "jsontests/res/files/vmInputLimitsLight"]
+#[test_with = "jsontests::util::run_test"]
+struct InputLimitsLight;
 
-#[test]
-fn inputLimits() {
-    for (name, value) in TESTS.as_object().unwrap().iter() {
-        print!("\t{} ... ", name);
-        match test_transaction(name, value, true) {
-            Ok(false) => panic!("test inputLimits::{} failed", name),
-            _ => (),
-        }
-    }
-}

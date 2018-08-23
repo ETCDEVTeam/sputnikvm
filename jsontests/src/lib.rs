@@ -1,10 +1,15 @@
+#![cfg_attr(feature = "bench", feature(test))]
 extern crate sputnikvm;
 extern crate serde_json;
 extern crate hexutil;
 extern crate bigint;
 extern crate env_logger;
 
+#[cfg(feature = "bench")]
+extern crate test;
+
 mod blockchain;
+pub mod util;
 
 pub use self::blockchain::{JSONBlock, create_block, create_context};
 

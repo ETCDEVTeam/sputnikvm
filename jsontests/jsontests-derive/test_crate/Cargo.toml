@@ -1,0 +1,10 @@
+[package]
+name = "test_crate"
+version = "0.1.0"
+authors = ["Mike Lubinets <lubinetsm@yandex.ru>"]
+
+[dependencies]
+serde_json = "1.0"
+
+[dependencies.jsontests-derive]
+path = "../"
