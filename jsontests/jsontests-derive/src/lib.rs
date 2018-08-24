@@ -8,12 +8,15 @@ extern crate serde_json as json;
 #[macro_use]
 extern crate failure;
 extern crate itertools;
+extern crate rayon;
+
+use rayon::prelude::*;
 
 use std::str::FromStr;
 use std::collections::HashSet;
 use std::ascii::AsciiExt;
 use std::path::{Path, PathBuf};
-use std::fs::{self, File};
+use std::fs::{self, File, DirEntry};
 use failure::Error;
 use itertools::Itertools;
 
@@ -37,12 +40,14 @@ use syn::DelimToken::Bracket;
 use quote::Tokens;
 use proc_macro::TokenStream;
 use json::Value;
+use std::time::Instant;
 
-
-#[proc_macro_derive(JsonTests, attributes(directory, test_with, bench_with))]
+#[proc_macro_derive(JsonTests, attributes(directory, test_with, bench_with, skip))]
 pub fn json_tests(input: TokenStream) -> TokenStream {
     // Construct a string representation of the type definition
     let s = input.to_string();
+
+
 
     // Parse the string representation
     let ast = syn::parse_derive_input(&s).unwrap();
@@ -53,8 +58,11 @@ pub fn json_tests(input: TokenStream) -> TokenStream {
         Err(err) => panic!("{}", err)
     };
 
+
     // Return the generated impl
-    gen.parse().unwrap()
+    let parsed = gen.parse().unwrap();
+
+    parsed
 }
 
 fn impl_json_tests(ast: &syn::DeriveInput) -> Result<quote::Tokens, Error> {
@@ -80,7 +88,7 @@ fn impl_json_tests(ast: &syn::DeriveInput) -> Result<quote::Tokens, Error> {
         let need_file_submodule = tests.len() > 1;
 
         if need_file_submodule {
-            open_file_module(&filepath, &mut tokens)
+            open_file_module(&filepath, &mut tokens);
         }
 
         // Generate test function
@@ -213,6 +221,12 @@ fn extract_attrs(ast: &syn::DeriveInput) -> Result<Config, Error> {
                     _ => panic!("{}", ERROR_MSG),
                 }
             },
+            MetaItem::Word(ref ident) => {
+                match ident.as_ref() {
+                    "skip" => Config { skip: true, ..config },
+                    _ => panic!("{}", ERROR_MSG),
+                }
+            }
             _ => panic!("{}", ERROR_MSG)
         }
     });
@@ -225,27 +239,46 @@ struct Config {
     directory: String,
     test_func: String,
     bench_func: Option<String>,
+    skip: bool,
 }
 
-fn read_tests_from_dir<P: AsRef<Path>>(dir_path: P) -> Result<Vec<Test>, Error> {
-    let mut parsed_tests = Vec::new();
+fn read_tests_from_dir<P: AsRef<Path>>(dir_path: P) -> Result<impl Iterator<Item=Test>, Error> {
+    let dir = fs::read_dir(dir_path)?;
 
-    for file in fs::read_dir(dir_path)? {
-        let path = file?.path().to_owned();
-        let file = File::open(&path)?;
-        let tests: Value = json::from_reader(file)?;
-        let tests = tests.as_object().cloned().ok_or_else(|| format_err!("expected a json object at the root of test file"))?;
-        for (name, data) in tests {
-            let test = Test {
-                path: path.to_str().unwrap().to_owned(),
-                name,
-                data
-            };
-            parsed_tests.push(test)
-        }
-    }
+    let iter = dir.into_iter()
+        .flat_map(|file|{
+            match file {
+                Ok(file) => tests_iterator_from_direntry(file).unwrap(),
+                Err(err) => panic!("failed to read dir: {}", err)
+            }
+        });
 
-    Ok(parsed_tests)
+    Ok(iter)
+}
+
+fn tests_iterator_from_direntry(file: DirEntry) -> Result<impl Iterator<Item=Test>, Error> {
+    let path = file.path().to_owned();
+    let file = File::open(&path)?;
+    let mut tests: Value = json::from_reader(file)?;
+
+    // Move out the root object
+    let tests = match tests {
+        Value::Object(tests) => tests,
+        _ => panic!("expected a json object at the root of test file")
+    };
+
+    let iter = tests.into_iter().map(move |(name, data)| Test {
+        path: path.to_str().unwrap().to_owned(),
+        name,
+        data
+    });
+
+    Ok(iter)
+}
+
+struct TestIterator {
+    dir: DirEntry,
+
 }
 
 struct Test {
