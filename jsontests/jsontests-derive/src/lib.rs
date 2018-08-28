@@ -42,7 +42,7 @@ use proc_macro::TokenStream;
 use json::Value;
 use std::time::Instant;
 
-#[proc_macro_derive(JsonTests, attributes(directory, test_with, bench_with, skip))]
+#[proc_macro_derive(JsonTests, attributes(directory, test_with, bench_with, skip, should_panic))]
 pub fn json_tests(input: TokenStream) -> TokenStream {
     // Construct a string representation of the type definition
     let s = input.to_string();
@@ -103,7 +103,6 @@ fn impl_json_tests(ast: &syn::DeriveInput) -> Result<quote::Tokens, Error> {
                 let bench_func_name = bench_func_path.rsplit(":").next().unwrap();
                 let bench_func_path = Ident::from(bench_func_path.as_ref());
                 let bench_func_name = Ident::from(bench_func_name);
-
                 let name = format!("bench_{}", name);
                 let name_ident = Ident::from(name.as_ref());
 
@@ -117,9 +116,14 @@ fn impl_json_tests(ast: &syn::DeriveInput) -> Result<quote::Tokens, Error> {
                 })
             }
 
+            // generate test attrs
+            tokens.append(quote!{#[test]});
+            if config.should_panic {
+                tokens.append(quote!{#[should_panic]});
+            }
+
             // generate test body
             tokens.append(quote! {
-                #[test]
                 fn #name_ident() {
                     use #test_func_path;
                     let data = #data;
@@ -224,12 +228,18 @@ fn extract_attrs(ast: &syn::DeriveInput) -> Result<Config, Error> {
             MetaItem::Word(ref ident) => {
                 match ident.as_ref() {
                     "skip" => Config { skip: true, ..config },
+                    "should_panic" => Config { should_panic: true, ..config },
                     _ => panic!("{}", ERROR_MSG),
                 }
             }
             _ => panic!("{}", ERROR_MSG)
         }
     });
+
+    // Check for incompatible options
+    if config.should_panic && config.bench_func.is_some() {
+        panic!("#[should_panic] is incompatible with benchmark tests");
+    }
 
     Ok(config)
 }
@@ -240,6 +250,7 @@ struct Config {
     test_func: String,
     bench_func: Option<String>,
     skip: bool,
+    should_panic: bool,
 }
 
 fn read_tests_from_dir<P: AsRef<Path>>(dir_path: P) -> Result<impl Iterator<Item=Test>, Error> {
