@@ -1,3 +1,4 @@
+#![cfg(feature = "bench")]
 #![feature(test)]
 #![allow(non_snake_case)]
 
