@@ -6,7 +6,6 @@ extern crate serde_json as json;
 #[macro_use]
 extern crate failure;
 extern crate itertools;
-extern crate rayon;
 
 mod attr;
 mod tests;
