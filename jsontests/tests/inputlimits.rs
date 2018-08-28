@@ -9,7 +9,7 @@ use jsontests::test_transaction;
 // Log format is broken for input limits tests
 
 #[test]
-#[skip]
+#[ignore]
 fn inputLimitsLight() {
     let TESTS: Value = serde_json::from_str(include_str!("../res/files/vmInputLimitsLight/vmInputLimitsLight.json")).unwrap();
     for (name, value) in TESTS.as_object().unwrap().iter() {
@@ -22,7 +22,7 @@ fn inputLimitsLight() {
 }
 
 #[test]
-#[skip]
+#[ignore]
 fn inputLimits() {
     let TESTS: Value = serde_json::from_str(include_str!("../res/files/vmInputLimits/vmInputLimits.json")).unwrap();
     for (name, value) in TESTS.as_object().unwrap().iter() {
