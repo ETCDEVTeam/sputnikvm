@@ -158,6 +158,7 @@ pub fn test_machine(v: &Value, machine: &SeqContextVM<VMTestPatch>, block: &JSON
     for (address, data) in post_addresses.as_object().unwrap() {
         let address = Address::from_str(address.as_str()).unwrap();
         let balance = read_u256(data["balance"].as_str().unwrap());
+        let nonce = read_u256(data["nonce"].as_str().unwrap());
         let code = read_hex(data["code"].as_str().unwrap()).unwrap();
         let code_ref: &[u8] = code.as_ref();
 
@@ -169,12 +170,24 @@ pub fn test_machine(v: &Value, machine: &SeqContextVM<VMTestPatch>, block: &JSON
 
             return false;
         }
+
         if balance != block.balance(address) {
             if debug {
                 print!("\n");
                 println!("Balance check failed for address 0x{:x}.", address);
                 println!("Expected: 0x{:x}", balance);
                 println!("Actual:   0x{:x}", block.balance(address));
+            }
+
+            return false;
+        }
+
+        if nonce != block.nonce(address) {
+            if debug {
+                print!("\n");
+                println!("Nonce check failed for address 0x{:x}.", address);
+                println!("Expected: 0x{:x}", nonce);
+                println!("Actual:   0x{:x}", block.nonce(address));
             }
 
             return false;

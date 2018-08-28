@@ -145,7 +145,7 @@ impl JSONBlock {
     }
 
     pub fn account_nonce(&self, address: Address) -> U256 {
-        self.nonces.get(&address).map_or(U256::zero(), |s| (*s).into())
+        self.nonces.get(&address).map_or(U256::zero(), |&s| s)
     }
 
     pub fn set_account_nonce(&mut self, address: Address, nonce: U256) {
@@ -161,11 +161,15 @@ impl JSONBlock {
     }
 
     pub fn balance(&self, address: Address) -> U256 {
-        self.balances.get(&address).map_or(U256::zero(), |s| (*s).into())
+        self.balances.get(&address).map_or(U256::zero(), |&s| s)
     }
 
     pub fn set_balance(&mut self, address: Address, balance: U256) {
         self.balances.insert(address, balance);
+    }
+
+    pub fn nonce(&self, address: Address) -> U256 {
+        self.nonces.get(&address).map_or(U256::zero(), |&s| s)
     }
 
     pub fn account_storage(&self, address: Address, index: U256) -> M256 {
