@@ -9,6 +9,9 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use std::rc::Rc;
 use read_u256;
+use rlp;
+use sha3::Keccak256;
+use sha3::Digest;
 
 pub struct JSONBlock {
     codes: HashMap<Address, Vec<u8>>,
@@ -193,6 +196,14 @@ impl JSONBlock {
             }
         }
         return false;
+    }
+
+    pub fn logs_rlp_hash(&self) -> U256 {
+        let encoded = rlp::encode_list(&self.logs[..]);
+        let mut keccak = Keccak256::new();
+        keccak.input(&encoded[..]);
+        let hash = keccak.result();
+        U256::from(&hash[..])
     }
 }
 

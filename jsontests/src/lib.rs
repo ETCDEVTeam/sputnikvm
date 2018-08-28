@@ -4,6 +4,8 @@ extern crate serde_json;
 extern crate hexutil;
 extern crate bigint;
 extern crate env_logger;
+extern crate sha3;
+extern crate rlp;
 
 #[cfg(feature = "bench")]
 extern crate test;
@@ -222,29 +224,20 @@ pub fn test_machine(v: &Value, machine: &SeqContextVM<VMTestPatch>, block: &JSON
         }
     }
 
-    let ref logs = v["logs"].as_array();
 
-    if logs.is_some() {
-        let logs = logs.unwrap();
+    let logs_hash = v["logs"].as_str().map(read_u256);
 
-        for log in logs {
-            let log = log.as_object().unwrap();
-
-            let address = Address::from_str(log["address"].as_str().unwrap()).unwrap();
-            let data = read_hex(log["data"].as_str().unwrap()).unwrap();
-            let mut topics: Vec<H256> = Vec::new();
-
-            for topic in log["topics"].as_array().unwrap() {
-                topics.push(H256::from_str(topic.as_str().unwrap()).unwrap());
+    if logs_hash.is_some() {
+        let logs_hash = logs_hash.unwrap();
+        let vm_logs_hash = block.logs_rlp_hash();
+        if logs_hash != vm_logs_hash {
+            if debug {
+                print!("\n");
+                println!("Logs check failed (hashes mismatch)");
+                println!("Expected: 0x{:x}", logs_hash);
+                println!("Actual: 0x{:x}", vm_logs_hash);
             }
-
-            if !block.find_log(address, data.as_slice(), topics.as_slice()) {
-                if debug {
-                    print!("\n");
-                    println!("Log match failed.");
-                }
-                return false;
-            }
+            return false;
         }
     }
 

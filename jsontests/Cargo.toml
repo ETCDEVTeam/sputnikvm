@@ -12,6 +12,9 @@ etcommon-hexutil = "0.2"
 serde_json = "1.0"
 lazy_static = "0.2"
 env_logger = "0.5.11"
+sha3 = "0.6"
+etcommon-rlp = { version = "0.2", default-features = false }
+
 
 [features]
 default = []
