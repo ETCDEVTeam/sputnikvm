@@ -84,8 +84,7 @@ pub fn test_machine(v: &Value, machine: &SeqContextVM<VMTestPatch>, block: &JSON
     let ref callcreates = v["callcreates"];
 
     if callcreates.as_array().is_some() {
-        let mut i = 0;
-        for callcreate in callcreates.as_array().unwrap() {
+        for (i, callcreate) in callcreates.as_array().unwrap().into_iter().enumerate() {
             let data = read_hex(callcreate["data"].as_str().unwrap()).unwrap();
             let destination = {
                 let destination = callcreate["destination"].as_str().unwrap();
@@ -122,8 +121,6 @@ pub fn test_machine(v: &Value, machine: &SeqContextVM<VMTestPatch>, block: &JSON
                 }
                 return false;
             }
-
-            i = i + 1;
         }
     }
 
