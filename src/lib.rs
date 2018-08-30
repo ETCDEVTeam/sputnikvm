@@ -1,30 +1,46 @@
 //! SputnikVM implementation, traits and structs.
 //!
-//! SputnikVM work on two different levels. It can directly handles a
-//! transaction, or a normal Etheruem execution context. To interact
-//! with the virtual machine, you usually only need to work with the
-//! [VM](trait.VM.html) trait.
+//! SputnikVM works on two different levels. It handles:
+//! 1. a transaction, or
+//! 2. an Ethereum execution context.
 //!
-//! ### Lifecycle
+//! To interact with the virtual machine, you usually only need to
+//! work with [VM](trait.VM.html) methods.
 //!
-//! A VM can be started given a `Transaction` (or `Context`) and a
-//! `BlockHeader`. The user can then `fire` or `step` to run it.
-//! `fire` runs through all possible steps until it cannot continue,
-//! while `step` only runs one step. Those functions would only fail
-//! if it needs some information (accounts in the current block, or
-//! block hashes of previous blocks) provided by `RequireError`. If
-//! this happens, one can use the function `commit_account` and
-//! `commit_blockhash` to commit those information to the VM, and
-//! `fire` or `step` again until it succeeds. The current VM status
-//! can always be obtained using the `status` function.
+//! ### A SputnikVM's Lifecycle
 //!
-//! ### Patch
+//! A VM can be started after it is given a `Transaction` (or
+//! `Context`) and a `BlockHeader`. The user can then `fire` or `step`
+//! to run it.  [`fire`](trait.VM.html#method.fire) runs the EVM code
+//! (given in field `code` of the transaction) until it finishes or
+//! cannot continue. However [`step`](trait.VM.html#tymethod.step)
+//! only runs at most one instruction. If the virtual machine needs
+//! some information (accounts in the current block, or block hashes
+//! of previous blocks) it fails, returning a
+//! [`RequireError`](errors/enum.RequireError.html) enumeration. With
+//! the data returned in the `RequireError` enumeration, one can use
+//! the methods
+//! [`commit_account`](trait.VM.html#tymethod.commit_account) and
+//! [`commit_blockhash`](trait.VM.html#tymethod.commit_blockhash) to
+//! commit the information to the VM. `fire` or `step` can be
+//! subsequently called to restart from that point. The current VM
+//! status can always be obtained using the `status` function. Again,
+//! see [VM](trait.VM.html) for a list of methods that can be applied.
+//!
+//! ### Patch: Specifying a Network and Hard-fork
 //!
 //! Every VM is associated with a `Patch`. This patch tells the VM
 //! which Ethereum network and which hard fork it is on. You will need
 //! to specify the patch as the type parameter. To interact with
-//! multiple Patches at the same time, it is recommended that you use
+//! multiple patches at the same time, it is recommended that you use
 //! trait objects.
+//!
+//! The example below creates a new SputnikVM and stores the object in
+//! `vm` which can be used to `fire`, `step` or get status on. To do
+//! this, it must first create a transaction and a block header.  The
+//! patch associated with the VM is either `EmbeddedByzantiumPatch` or
+//! `VMTestPatch` depending on an arbitrary block number value set at
+//! the beginning of the program.
 //!
 //! ```
 //! extern crate bigint;
@@ -67,22 +83,24 @@
 //! ### Transaction Execution
 //!
 //! To start a VM on the Transaction level, use the `TransactionVM`
-//! struct. Usually, you use the sequencial memory module, which we
-//! have a definition called `SeqTransactionVM`. Call to
-//! `TransactionVM::new` would require the transaction to be valid
-//! (according to the rules for an Ethereum transaction). For an
-//! invalid transaction, it is possible for the VM to panic. If you
-//! want to handle untrusted transactions, you should use
-//! `SeqTransactionVM::new_untrusted` which will return an error if
-//! the transaction is invalid.
+//! struct. Usually, you want to use the sequential memory module
+//! which can be done using the type definition
+//! `SeqTransactionVM`.
+//!
+//! Calling `TransactionVM::new` or `SeqTransactionVM::new` requires
+//! the transaction passed in to be valid (according to the rules for
+//! an Ethereum transaction). If the transaction is invalid, the VM
+//! will probably panic. If you want to handle untrusted transactions,
+//! you should use `SeqTransactionVM::new_untrusted`, which will not
+//! panic but instead return an error if the transaction is invalid.
 //!
 //! ### Context Execution
 //!
-//! To start a VM on the Context leve, use the `ContextVM`
-//! struct. Usually, you use the sequencial memory module, which we
-//! have a definition called `SeqContextVM`. Context execution, as the
-//! same with other EVM implementations, will not handle
-//! transaction-level gas reductions.
+//! To start a VM on the Context level, use the `ContextVM`
+//! struct. Usually, you use the sequential memory module with the
+//! type definition `SeqContextVM`. Context execution, as with other
+//! EVM implementations, will not handle transaction-level gas
+//! reductions.
 
 #![deny(unused_import_braces, unused_imports,
         unused_comparisons, unused_must_use,
@@ -219,10 +237,10 @@ pub trait VM {
     fn used_gas(&self) -> Gas;
 }
 
-/// A sequencial VM. It uses sequencial memory representation and hash
+/// A sequential VM. It uses sequential memory representation and hash
 /// map storage for accounts.
 pub type SeqContextVM<P> = ContextVM<SeqMemory<P>, P>;
-/// A sequencial transaction VM. This is same as `SeqContextVM` except
+/// A sequential transaction VM. This is same as `SeqContextVM` except
 /// it runs at transaction level.
 pub type SeqTransactionVM<P> = TransactionVM<SeqMemory<P>, P>;
 
