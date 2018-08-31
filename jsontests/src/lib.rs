@@ -1,9 +1,17 @@
+#![cfg_attr(feature = "bench", feature(test))]
 extern crate sputnikvm;
 extern crate serde_json;
 extern crate hexutil;
 extern crate bigint;
+extern crate env_logger;
+extern crate sha3;
+extern crate rlp;
+
+#[cfg(feature = "bench")]
+extern crate test;
 
 mod blockchain;
+pub mod util;
 
 pub use self::blockchain::{JSONBlock, create_block, create_context};
 
@@ -72,12 +80,14 @@ pub fn create_machine(v: &Value, block: &JSONBlock) -> SeqContextVM<VMTestPatch>
     SeqContextVM::<VMTestPatch>::new(transaction, block.block_header())
 }
 
-pub fn test_machine(v: &Value, machine: &SeqContextVM<VMTestPatch>, block: &JSONBlock, history: &Vec<Context>, debug: bool) -> bool {
-    let ref callcreates = v["callcreates"];
+// TODO: consider refactoring
+#[cfg_attr(feature = "cargo-clippy", allow(cyclomatic_complexity))]
+#[cfg_attr(feature = "cargo-clippy", allow(collapsible_if))]
+pub fn test_machine(v: &Value, machine: &SeqContextVM<VMTestPatch>, block: &JSONBlock, history: &[Context], debug: bool) -> bool {
+    let callcreates = &v["callcreates"];
 
     if callcreates.as_array().is_some() {
-        let mut i = 0;
-        for callcreate in callcreates.as_array().unwrap() {
+        for (i, callcreate) in callcreates.as_array().unwrap().into_iter().enumerate() {
             let data = read_hex(callcreate["data"].as_str().unwrap()).unwrap();
             let destination = {
                 let destination = callcreate["destination"].as_str().unwrap();
@@ -87,21 +97,21 @@ pub fn test_machine(v: &Value, machine: &SeqContextVM<VMTestPatch>, block: &JSON
                     Some(Address::from_str(destination).unwrap())
                 }
             };
-            let gas_limit = Gas::from_str(callcreate["gasLimit"].as_str().unwrap()).unwrap();
-            let value = U256::from_str(callcreate["value"].as_str().unwrap()).unwrap();
+            let gas_limit = Gas::from(read_u256(callcreate["gasLimit"].as_str().unwrap()));
+            let value = read_u256(callcreate["value"].as_str().unwrap());
 
             if i >= history.len() {
                 if debug {
-                    print!("\n");
+                    println!();
                     println!("Transaction check failed, expected more than {} items.", i);
                 }
                 return false;
             }
-            let ref transaction = history[i];
+            let transaction = &history[i];
             if destination.is_some() {
                 if transaction.address != destination.unwrap() {
                     if debug {
-                        print!("\n");
+                        println!();
                         println!("Transaction address mismatch. 0x{:x} != 0x{:x}.", transaction.address, destination.unwrap());
                     }
                     return false;
@@ -109,25 +119,23 @@ pub fn test_machine(v: &Value, machine: &SeqContextVM<VMTestPatch>, block: &JSON
             }
             if transaction.gas_limit != gas_limit || transaction.value != value || if destination.is_some() { transaction.data.deref() != &data } else { transaction.code.deref() != &data } {
                 if debug {
-                    print!("\n");
+                    println!();
                     println!("Transaction mismatch. gas limit 0x{:x} =?= 0x{:x}, value 0x{:x} =?= 0x{:x}, data {:?} =?= {:?}", transaction.gas_limit, gas_limit, transaction.value, value, transaction.data, data);
                 }
                 return false;
             }
-
-            i = i + 1;
         }
     }
 
     let out = v["out"].as_str();
     let gas = v["gas"].as_str();
 
-    if out.is_some() {
-        let out = read_hex(out.unwrap()).unwrap();
+    if let Some(out) = out {
+        let out = read_hex(out).unwrap();
         let out_ref: &[u8] = out.as_ref();
         if machine.out() != out_ref {
             if debug {
-                print!("\n");
+                println!();
                 println!("Return value check failed. {:?} != {:?}", machine.out(), out_ref);
             }
 
@@ -135,11 +143,11 @@ pub fn test_machine(v: &Value, machine: &SeqContextVM<VMTestPatch>, block: &JSON
         }
     }
 
-    if gas.is_some() {
-        let gas = Gas::from_str(gas.unwrap()).unwrap();
+    if let Some(gas) = gas {
+        let gas = Gas::from(read_u256(gas));
         if machine.available_gas() != gas {
             if debug {
-                print!("\n");
+                println!();
                 println!("Gas check failed, VM returned: 0x{:x}, expected: 0x{:x}",
                          machine.available_gas(), gas);
             }
@@ -148,25 +156,27 @@ pub fn test_machine(v: &Value, machine: &SeqContextVM<VMTestPatch>, block: &JSON
         }
     }
 
-    let ref post_addresses = v["post"];
+    let post_addresses = &v["post"];
 
     for (address, data) in post_addresses.as_object().unwrap() {
         let address = Address::from_str(address.as_str()).unwrap();
-        let balance = U256::from_str(data["balance"].as_str().unwrap()).unwrap();
+        let balance = read_u256(data["balance"].as_str().unwrap());
+        let nonce = read_u256(data["nonce"].as_str().unwrap());
         let code = read_hex(data["code"].as_str().unwrap()).unwrap();
         let code_ref: &[u8] = code.as_ref();
 
         if code_ref != block.account_code(address) {
             if debug {
-                print!("\n");
+                println!();
                 println!("Account code check failed for address 0x{:x}.", address);
             }
 
             return false;
         }
+
         if balance != block.balance(address) {
             if debug {
-                print!("\n");
+                println!();
                 println!("Balance check failed for address 0x{:x}.", address);
                 println!("Expected: 0x{:x}", balance);
                 println!("Actual:   0x{:x}", block.balance(address));
@@ -175,13 +185,24 @@ pub fn test_machine(v: &Value, machine: &SeqContextVM<VMTestPatch>, block: &JSON
             return false;
         }
 
+        if nonce != block.nonce(address) {
+            if debug {
+                println!();
+                println!("Nonce check failed for address 0x{:x}.", address);
+                println!("Expected: 0x{:x}", nonce);
+                println!("Actual:   0x{:x}", block.nonce(address));
+            }
+
+            return false;
+        }
+
         let storage = data["storage"].as_object().unwrap();
         for (index, value) in storage {
-            let index = U256::from_str(index.as_str()).unwrap();
+            let index = read_u256(index.as_str());
             let value = M256::from_str(value.as_str().unwrap()).unwrap();
             if value != block.account_storage(address, index) {
                 if debug {
-                    print!("\n");
+                    println!();
                     println!("Storage check failed for address 0x{:x} in storage index 0x{:x}",
                              address, index);
                     println!("Expected: 0x{:x}", value);
@@ -192,7 +213,7 @@ pub fn test_machine(v: &Value, machine: &SeqContextVM<VMTestPatch>, block: &JSON
         }
     }
 
-    let ref expect = v["expect"];
+    let expect = &v["expect"];
 
     if expect.as_object().is_some() {
         for (address, data) in expect.as_object().unwrap() {
@@ -200,11 +221,11 @@ pub fn test_machine(v: &Value, machine: &SeqContextVM<VMTestPatch>, block: &JSON
 
             let storage = data["storage"].as_object().unwrap();
             for (index, value) in storage {
-                let index = U256::from_str(index.as_str()).unwrap();
+                let index = read_u256(index.as_str());
                 let value = M256::from_str(value.as_str().unwrap()).unwrap();
                 if value != block.account_storage(address, index) {
                     if debug {
-                        print!("\n");
+                        println!();
                         println!("Storage check (expect) failed for address 0x{:x} in storage index 0x{:x}",
                                  address, index);
                         println!("Expected: 0x{:x}", value);
@@ -216,43 +237,36 @@ pub fn test_machine(v: &Value, machine: &SeqContextVM<VMTestPatch>, block: &JSON
         }
     }
 
-    let ref logs = v["logs"].as_array();
 
-    if logs.is_some() {
-        let logs = logs.unwrap();
+    let logs_hash = v["logs"].as_str().map(read_u256);
 
-        for log in logs {
-            let log = log.as_object().unwrap();
-
-            let address = Address::from_str(log["address"].as_str().unwrap()).unwrap();
-            let data = read_hex(log["data"].as_str().unwrap()).unwrap();
-            let mut topics: Vec<H256> = Vec::new();
-
-            for topic in log["topics"].as_array().unwrap() {
-                topics.push(H256::from_str(topic.as_str().unwrap()).unwrap());
+    if logs_hash.is_some() {
+        let logs_hash = logs_hash.unwrap();
+        let vm_logs_hash = block.logs_rlp_hash();
+        if logs_hash != vm_logs_hash {
+            if debug {
+                println!();
+                println!("Logs check failed (hashes mismatch)");
+                println!("Expected: 0x{:x}", logs_hash);
+                println!("Actual: 0x{:x}", vm_logs_hash);
             }
-
-            if !block.find_log(address, data.as_slice(), topics.as_slice()) {
-                if debug {
-                    print!("\n");
-                    println!("Log match failed.");
-                }
-                return false;
-            }
+            return false;
         }
     }
 
-    return true;
+    true
 }
 
-fn is_ok(status: VMStatus) -> bool {
-    match status {
+fn is_ok(status: &VMStatus) -> bool {
+    match *status {
         VMStatus::ExitedOk => true,
         _ => false,
     }
 }
 
-pub fn test_transaction(_name: &str, v: &Value, debug: bool) -> bool {
+pub fn test_transaction(_name: &str, v: &Value, debug: bool) -> Result<bool, VMStatus> {
+    let _ = env_logger::try_init();
+
     let mut block = create_block(v);
     let history: Arc<Mutex<Vec<Context>>> = Arc::new(Mutex::new(Vec::new()));
     let history_closure = history.clone();
@@ -269,20 +283,28 @@ pub fn test_transaction(_name: &str, v: &Value, debug: bool) -> bool {
     let out = v["out"].as_str();
 
     if out.is_some() {
-        if is_ok(machine.status()) {
+        if is_ok(&machine.status()) {
             if test_machine(v, &machine, &block, &history.lock().unwrap(), debug) {
-                return true;
+                Ok(true)
             } else {
-                return false;
+                Ok(false)
             }
         } else {
-            return false;
+            Err(machine.status())
         }
+    } else if !is_ok(&machine.status()) {
+        Ok(true)
     } else {
-        if !is_ok(machine.status()) {
-            return true;
-        } else {
-            return false;
-        }
+        Ok(false)
+    }
+}
+
+/// Read U256 number exactly the way go big.Int parses strings
+/// except for base 2 and 8 which are not used in tests
+pub fn read_u256(number: &str) -> U256 {
+    if number.starts_with("0x") {
+        U256::from_str(number).unwrap()
+    } else {
+        U256::from_dec_str(number).unwrap()
     }
 }
