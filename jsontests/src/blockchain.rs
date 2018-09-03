@@ -47,10 +47,10 @@ impl JSONBlock {
         let nonce = self.account_nonce(address);
 
         AccountCommitment::Full {
-            address: address,
-            balance: balance,
+            address,
+            balance,
             code: Rc::new(code.into()),
-            nonce: nonce
+            nonce
         }
     }
 
@@ -63,9 +63,9 @@ impl JSONBlock {
         };
 
         AccountCommitment::Storage {
-            address: address,
-            index: index,
-            value: value,
+            address,
+            index,
+            value,
         }
     }
 
@@ -74,7 +74,7 @@ impl JSONBlock {
         let code = self.codes.get(&address).unwrap_or(&default);
 
         AccountCommitment::Code {
-            address: address,
+            address,
             code: Rc::new(code.clone()),
         }
     }
@@ -90,9 +90,7 @@ impl JSONBlock {
             } => {
                 self.set_balance(address, balance);
                 self.set_account_code(address, code.as_slice());
-                if !self.storages.contains_key(&address) {
-                    self.storages.insert(address, HashMap::new());
-                }
+                self.storages.entry(address).or_insert_with(HashMap::new);
                 let changing_storage: HashMap<U256, M256> = changing_storage.into();
                 for (key, value) in changing_storage {
                     self.storages.get_mut(&address).unwrap().insert(key, value);
@@ -199,7 +197,7 @@ impl JSONBlock {
                 return true;
             }
         }
-        return false;
+        false
     }
 
     pub fn logs_rlp_hash(&self) -> U256 {
@@ -236,7 +234,7 @@ pub fn create_block(v: &Value) -> JSONBlock {
         }
     };
 
-    let ref pre_addresses = v["pre"];
+    let pre_addresses = &v["pre"];
 
     for (address, data) in pre_addresses.as_object().unwrap() {
         let address = Address::from_str(address.as_str()).unwrap();
@@ -262,20 +260,20 @@ pub fn create_context(v: &Value) -> Context {
     let caller = Address::from_str(v["exec"]["caller"].as_str().unwrap()).unwrap();
     let code = read_hex(v["exec"]["code"].as_str().unwrap()).unwrap();
     let data = read_hex(v["exec"]["data"].as_str().unwrap()).unwrap();
-    let gas = Gas::from(read_u256(v["exec"]["gas"].as_str().unwrap()));
+    let gas_limit = Gas::from(read_u256(v["exec"]["gas"].as_str().unwrap()));
     let gas_price = Gas::from(read_u256(v["exec"]["gasPrice"].as_str().unwrap()));
     let origin = Address::from_str(v["exec"]["origin"].as_str().unwrap()).unwrap();
     let value = read_u256(v["exec"]["value"].as_str().unwrap());
 
     Context {
-        address: address,
-        caller: caller,
+        address,
+        caller,
         code: Rc::new(code),
         data: Rc::new(data),
-        gas_limit: gas,
-        gas_price: gas_price,
-        origin: origin,
-        value: value,
+        gas_limit,
+        gas_price,
+        origin,
+        value,
         apprent_value: value,
         is_system: false,
         is_static: false,
