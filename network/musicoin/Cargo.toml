@@ -7,5 +7,14 @@ authors = ["Wei Tang <hi@that.world>"]
 repository = "https://github.com/ethereumproject/sputnikvm"
 
 [dependencies]
-sputnikvm = { version = "0.10", path = "../.." }
+sputnikvm = { version = "0.10", path = "../..", default-features = false }
+sputnikvm-precompiled-bn128 = { version = "0.10", path = "../../precompiled/bn128", default-features = false}
+sputnikvm-precompiled-modexp = { version = "0.10", path = "../../precompiled/modexp", default-features = false }
 etcommon-bigint = { version = "0.2", default-features = false }
+
+[features]
+default = ["std", "c-secp256k1"]
+rlp = ["etcommon-bigint/rlp"]
+c-secp256k1 = ["sputnikvm/c-secp256k1", "sputnikvm-precompiled-bn128/c-secp256k1", "sputnikvm-precompiled-modexp/c-secp256k1"]
+rust-secp256k1 = ["sputnikvm/rust-secp256k1", "sputnikvm-precompiled-bn128/rust-secp256k1", "sputnikvm-precompiled-modexp/rust-secp256k1"]
+std = ["sputnikvm/std"]
