@@ -38,7 +38,7 @@
 //! The example below creates a new SputnikVM and stores the object in
 //! `vm` which can be used to `fire`, `step` or get status on. To do
 //! this, it must first create a transaction and a block header.  The
-//! patch associated with the VM is either `EmbeddedByzantiumPatch` or
+//! patch associated with the VM is either `EmbeddedPatch` or
 //! `VMTestPatch` depending on an arbitrary block number value set at
 //! the beginning of the program.
 //!
@@ -46,7 +46,7 @@
 //! extern crate bigint;
 //! extern crate sputnikvm;
 //!
-//! use sputnikvm::{EmbeddedByzantiumPatch, VMTestPatch,
+//! use sputnikvm::{EmbeddedPatch, VMTestPatch,
 //!                 HeaderParams, ValidTransaction, TransactionAction,
 //!                 VM, SeqTransactionVM};
 //! use bigint::{Gas, U256, Address};
@@ -74,7 +74,7 @@
 //!     SeqTransactionVM::<VMTestPatch>::new(
 //!       transaction, header);
 //!   } else {
-//!     SeqTransactionVM::<EmbeddedByzantiumPatch>::new(
+//!     SeqTransactionVM::<EmbeddedPatch>::new(
 //!       transaction, header);
 //!   };
 //! }
