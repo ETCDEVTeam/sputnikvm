@@ -4,7 +4,7 @@ version = "0.10.1"
 description = "Ellaism patches for SputnikVM."
 license = "Apache-2.0"
 authors = ["Wei Tang <hi@that.world>"]
-repository = "https://github.com/ethereumproject/sputnikvm"
+repository = "https://github.com/ETCDEVTeam/sputnikvm"
 
 [dependencies]
 sputnikvm = { version = "0.10", path = "../..", default-features = false }
