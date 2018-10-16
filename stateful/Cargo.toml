@@ -21,3 +21,7 @@ serde_json = "1.0"
 lazy_static = "0.2"
 etcommon-hexutil = "0.2"
 sputnikvm-network-classic = { version = "0.10", path = "../network/classic" }
+
+[features]
+default = []
+nightly = []

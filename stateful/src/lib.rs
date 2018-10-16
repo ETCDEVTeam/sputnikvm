@@ -1,3 +1,4 @@
+#![cfg_attr(feature = "nightly", feature(nll))]
 #![deny(unused_import_braces, unused_imports,
         unused_comparisons, unused_must_use,
         unused_variables, non_shorthand_field_patterns,
@@ -35,7 +36,7 @@ pub struct Stateful<'a, D: 'a> {
     root: H256,
 }
 
-impl<'a, D> Stateful<'a, D> {
+impl<'a, D: 'a> Stateful<'a, D> {
     pub fn new(database: &'a D, root: H256) -> Self {
         Self {
             database,
@@ -48,7 +49,7 @@ impl<'a, D> Stateful<'a, D> {
     }
 }
 
-impl<'b, D: DatabaseOwned> Stateful<'b, D> {
+impl<'b, D: DatabaseOwned + 'b> Stateful<'b, D> {
     fn is_empty_hash(hash: H256) -> bool {
         hash == H256::from(Keccak256::digest(&[]).as_slice())
     }
