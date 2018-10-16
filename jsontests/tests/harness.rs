@@ -4,6 +4,7 @@
 #[macro_use]
 extern crate jsontests_derive;
 extern crate jsontests;
+extern crate sputnikvm;
 
 #[derive(JsonTests)]
 #[directory = "jsontests/res/files/HarnessCorrectnessTests"]
