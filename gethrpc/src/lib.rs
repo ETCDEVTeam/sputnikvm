@@ -1,7 +1,6 @@
 extern crate serde;
 extern crate serde_json;
-extern crate hyper;
-extern crate hyper_native_tls;
+extern crate reqwest;
 
 #[macro_use]
 extern crate serde_derive;
@@ -10,11 +9,7 @@ mod record;
 
 pub use record::{RecordGethRPCClient, CachedGethRPCClient};
 
-use std::io::Read;
-use hyper::header::ContentType;
-use hyper::Client;
-use hyper::net::HttpsConnector;
-use hyper_native_tls::NativeTlsClient;
+use reqwest::Client;
 
 #[derive(Serialize, Deserialize)]
 struct RPCRequest {
@@ -44,11 +39,11 @@ struct RPCObjectResponse<T> {
 pub struct RPCTransaction {
     pub hash: String,
     pub nonce: String,
-    pub block_hash: String,
-    pub block_number: String,
-    pub transaction_index: String,
+    pub block_hash: Option<String>,
+    pub block_number: Option<String>,
+    pub transaction_index: Option<String>,
     pub from: String,
-    pub to: String,
+    pub to: Option<String>,
     pub value: String,
     pub gas: String,
     pub gas_price: String,
@@ -69,17 +64,17 @@ pub struct RPCCall {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct RPCBlock {
-    pub number: String,
-    pub hash: String,
+    pub number: Option<String>,
+    pub hash: Option<String>,
     pub parent_hash: String,
-    pub nonce: String,
+    pub nonce: Option<String>,
     pub sha3_uncles: String,
-    pub logs_bloom: String,
+    pub logs_bloom: Option<String>,
     pub transactions_root: String,
     pub state_root: String,
     pub miner: String,
     pub difficulty: String,
-    pub total_difficulty: String,
+    pub total_difficulty: Option<String>,
     pub extra_data: String,
     pub size: String,
     pub gas_limit: String,
@@ -109,9 +104,11 @@ pub struct RPCTransactionReceipt {
     pub transaction_index: String,
     pub block_hash: String,
     pub block_number: String,
+    pub from: String,
+    pub to: Option<String>,
     pub cumulative_gas_used: String,
     pub gas_used: String,
-    pub contract_address: String,
+    pub contract_address: Option<String>,
     pub logs: Vec<RPCLog>,
 }
 
@@ -138,13 +135,13 @@ pub struct RPCFilter {
 }
 
 pub trait GethRPCClient {
-    fn rpc_object_request<Req: serde::Serialize, Res: serde::Deserialize>(
+    fn rpc_object_request<Req: serde::Serialize, Res: serde::de::DeserializeOwned>(
         &mut self,
         method: &str,
         params: Req,
     ) -> Res;
 
-    fn rpc_request<T: serde::Deserialize>(&mut self, method: &str, params: Vec<String>) -> T {
+    fn rpc_request<T: serde::de::DeserializeOwned>(&mut self, method: &str, params: Vec<String>) -> T {
         self.rpc_object_request::<Vec<String>, T>(method, params)
     }
 
@@ -250,30 +247,30 @@ pub trait GethRPCClient {
         )
     }
 
-    fn get_block_by_hash(&mut self, hash: &str) -> RPCBlock {
-        self.rpc_object_request::<(String, bool), RPCBlock>(
+    fn get_block_by_hash(&mut self, hash: &str) -> Option<RPCBlock> {
+        self.rpc_object_request::<(String, bool), Option<RPCBlock>>(
             "eth_getBlockByHash",
             (hash.to_string(), false),
         )
     }
 
-    fn get_block_by_number(&mut self, number: &str) -> RPCBlock {
-        self.rpc_object_request::<(String, bool), RPCBlock>(
+    fn get_block_by_number(&mut self, number: &str) -> Option<RPCBlock> {
+        self.rpc_object_request::<(String, bool), Option<RPCBlock>>(
             "eth_getBlockByNumber",
             (number.to_string(), false),
         )
     }
 
-    fn get_transaction_by_hash(&mut self, hash: &str) -> RPCTransaction {
-        self.rpc_request::<RPCTransaction>("eth_getTransactionByHash", vec![hash.to_string()])
+    fn get_transaction_by_hash(&mut self, hash: &str) -> Option<RPCTransaction> {
+        self.rpc_request::<Option<RPCTransaction>>("eth_getTransactionByHash", vec![hash.to_string()])
     }
 
     fn get_transaction_by_block_hash_and_index(
         &mut self,
         hash: &str,
         index: &str,
-    ) -> RPCTransaction {
-        self.rpc_request::<RPCTransaction>(
+    ) -> Option<RPCTransaction> {
+        self.rpc_request::<Option<RPCTransaction>>(
             "eth_getTransactionByBlockHashAndIndex",
             vec![hash.to_string(), index.to_string()],
         )
@@ -283,29 +280,29 @@ pub trait GethRPCClient {
         &mut self,
         number: &str,
         index: &str,
-    ) -> RPCTransaction {
-        self.rpc_request::<RPCTransaction>(
+    ) -> Option<RPCTransaction> {
+        self.rpc_request::<Option<RPCTransaction>>(
             "eth_getTransactionByBlockNumberAndIndex",
             vec![number.to_string(), index.to_string()],
         )
     }
 
-    fn get_transaction_receipt(&mut self, hash: &str) -> RPCTransactionReceipt {
-        self.rpc_request::<RPCTransactionReceipt>(
+    fn get_transaction_receipt(&mut self, hash: &str) -> Option<RPCTransactionReceipt> {
+        self.rpc_request::<Option<RPCTransactionReceipt>>(
             "eth_getTransactionReceipt",
             vec![hash.to_string()],
         )
     }
 
-    fn get_uncle_by_block_hash_and_index(&mut self, hash: &str, index: &str) -> RPCBlock {
-        self.rpc_request::<RPCBlock>(
+    fn get_uncle_by_block_hash_and_index(&mut self, hash: &str, index: &str) -> Option<RPCBlock> {
+        self.rpc_request::<Option<RPCBlock>>(
             "eth_getUncleByBlockHashAndIndex",
             vec![hash.to_string(), index.to_string()],
         )
     }
 
-    fn get_uncle_by_block_number_and_index(&mut self, number: &str, index: &str) -> RPCBlock {
-        self.rpc_request::<RPCBlock>(
+    fn get_uncle_by_block_number_and_index(&mut self, number: &str, index: &str) -> Option<RPCBlock> {
+        self.rpc_request::<Option<RPCBlock>>(
             "eth_getUncleByBlockNumberAndIndex",
             vec![number.to_string(), index.to_string()],
         )
@@ -320,18 +317,16 @@ pub struct NormalGethRPCClient {
 
 impl NormalGethRPCClient {
     pub fn new(endpoint: &str) -> Self {
-        let ssl = NativeTlsClient::new().unwrap();
-        let connector = HttpsConnector::new(ssl);
         NormalGethRPCClient {
             endpoint: endpoint.to_string(),
             free_id: 1,
-            http: Client::with_connector(connector),
+            http: Client::new(),
         }
     }
 }
 
 impl GethRPCClient for NormalGethRPCClient {
-    fn rpc_object_request<Req: serde::Serialize, Res: serde::Deserialize>(
+    fn rpc_object_request<Req: serde::Serialize, Res: serde::de::DeserializeOwned>(
         &mut self,
         method: &str,
         params: Req,
@@ -344,16 +339,13 @@ impl GethRPCClient for NormalGethRPCClient {
         };
         self.free_id = self.free_id + 1;
 
-        let mut response_raw = self.http
-            .post(&self.endpoint)
-            .header(ContentType::json())
-            .body(&serde_json::to_string(&request).unwrap())
+        let mut response = self.http.post(&self.endpoint)
+            .json(&request)
             .send()
             .unwrap();
-        let mut buffer = String::new();
-        response_raw.read_to_string(&mut buffer).unwrap();
 
-        let response: RPCObjectResponse<Res> = serde_json::from_str(&buffer).unwrap();
+        let response: RPCObjectResponse<Res> = response.json().unwrap();
+
         response.result
     }
 }
