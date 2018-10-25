@@ -69,7 +69,7 @@ macro_rules! try_balance {
     }
 }
 
-pub fn create<M: Memory + Default, P: Patch>(state: &mut State<M, P>, after_gas: Gas) -> Option<Control> {
+pub fn create<M: Memory + Default, P: Patch>(state: &mut State<M, P>, after_gas: Gas, is_create2: bool) -> Option<Control> {
     let l64_after_gas = if P::call_create_l64_after_gas() { l64(after_gas) } else { after_gas };
 
     pop!(state, value: U256);
@@ -79,15 +79,31 @@ pub fn create<M: Memory + Default, P: Patch>(state: &mut State<M, P>, after_gas:
     try_balance!(state, value, Gas::zero());
 
     let init = Rc::new(copy_from_memory(&state.memory, init_start, init_len));
-    let transaction = ValidTransaction {
-        caller: Some(state.context.address),
-        gas_price: state.context.gas_price,
-        gas_limit: l64_after_gas,
-        value,
-        input: init,
-        action: TransactionAction::Create,
-        nonce: state.account_state.nonce(state.context.address).unwrap(),
+    let transaction = if !is_create2 {
+        ValidTransaction {
+            caller: Some(state.context.address),
+            gas_price: state.context.gas_price,
+            gas_limit: l64_after_gas,
+            value,
+            input: init,
+            action: TransactionAction::Create,
+            nonce: state.account_state.nonce(state.context.address).unwrap(),
+        }
+    } else {
+        pop!(state, salt: H256);
+        let init_hash = Keccak256::digest(&init);
+        let init_hash = M256::from(&init_hash[..]);
+        ValidTransaction {
+            caller: Some(state.context.address),
+            gas_price: state.context.gas_price,
+            gas_limit: l64_after_gas,
+            value,
+            input: init.clone(),
+            action: TransactionAction::Create2(salt, init_hash),
+            nonce: state.account_state.nonce(state.context.address).unwrap(),
+        }
     };
+
     let context = transaction.into_context::<P>(
         Gas::zero(), Some(state.context.origin), &mut state.account_state, true,
         state.context.is_static,

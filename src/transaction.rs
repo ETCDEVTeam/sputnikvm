@@ -242,7 +242,7 @@ impl ValidTransaction {
                     is_static
                 })
             },
-            TransactionAction::Create => {
+            TransactionAction::Create | TransactionAction::Create2(..) => {
                 if self.caller.is_some() {
                     account_state.require(self.caller.unwrap())?;
                     let nonce = self.nonce;
@@ -455,8 +455,8 @@ impl<M: Memory + Default, P: Patch> VM for TransactionVM<M, P> {
                 account_state.require(address)?;
 
                 ccode_deposit = match transaction.action {
+                    TransactionAction::Create | TransactionAction::Create2(..) => true,
                     TransactionAction::Call(_) => false,
-                    TransactionAction::Create => true,
                 };
                 cgas = transaction.intrinsic_gas::<P>();
                 cpreclaimed_value = transaction.preclaimed_value();

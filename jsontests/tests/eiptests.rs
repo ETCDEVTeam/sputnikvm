@@ -7,24 +7,41 @@ extern crate jsontests_derive;
 extern crate jsontests;
 extern crate sputnikvm;
 extern crate bigint;
+
 #[cfg(feature = "bench")]
 extern crate test;
 
 use sputnikvm::{EmbeddedAccountPatch, Patch, EMBEDDED_PRECOMPILEDS, Precompiled};
 use bigint::{Address, Gas};
 
+// Shifting opcodes tests
 #[derive(JsonTests)]
-#[directory = "jsontests/res/files/eth/VMTests/vmConstantinopleTests"]
+#[directory = "jsontests/res/files/eth/VMTests/vmEIP215"]
 #[test_with = "jsontests::util::run_test"]
 #[cfg_attr(feature = "bench", bench_with = "jsontests::util::run_bench")]
-struct ConstantinopleTests;
+struct EIP215;
 
+// EXTCODEHASH tests
+#[derive(JsonTests)]
+#[directory = "jsontests/res/files/eth/VMTests/vmEIP1052"]
+#[test_with = "jsontests::util::run_test"]
+#[cfg_attr(feature = "bench", bench_with = "jsontests::util::run_bench")]
+struct EIP1052;
+
+// CREATE2 tests
+#[derive(JsonTests)]
+#[directory = "jsontests/res/files/eth/VMTests/vmEIP1014"]
+#[test_with = "jsontests::util::run_test"]
+#[cfg_attr(feature = "bench", bench_with = "jsontests::util::run_bench")]
+struct EIP1014;
+
+// Gas metering changes tests
 #[derive(JsonTests)]
 #[directory = "jsontests/res/files/eth/VMTests/vmEIP1283"]
 #[test_with = "jsontests::util::run_test"]
 #[patch = "EIP1283Patch"]
 #[cfg_attr(feature = "bench", bench_with = "jsontests::util::run_bench")]
-struct EIP1283Tests;
+struct EIP1283;
 
 struct EIP1283Patch;
 impl Patch for EIP1283Patch {

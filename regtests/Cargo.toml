@@ -21,7 +21,7 @@ path = "src/bin/main.rs"
 sputnikvm = { path = '..' }
 sputnikvm-network-classic = { path = "../network/classic" }
 gethrpc = { path = '../gethrpc' }
-etcommon-block = "0.3"
+etcommon-block = "0.5"
 etcommon-bigint = "0.2"
 etcommon-hexutil = "0.2"
 clap = "2.22"

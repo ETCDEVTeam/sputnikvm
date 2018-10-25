@@ -158,7 +158,7 @@ pub fn memory_cost<M: Memory + Default, P: Patch>(instruction: Instruction, stat
             let from: U256 = stack.peek(0).unwrap().into();
             memory_expand(current, Gas::from(from), Gas::from(1u64))
         },
-        Instruction::CREATE => {
+        Instruction::CREATE | Instruction::CREATE2 => {
             let from: U256 = stack.peek(1).unwrap().into();
             let len: U256 = stack.peek(2).unwrap().into();
             memory_expand(current, Gas::from(from), Gas::from(len))
@@ -222,6 +222,12 @@ pub fn gas_cost<M: Memory + Default, P: Patch>(instruction: Instruction, state: 
         }
 
         Instruction::CREATE => G_CREATE.into(),
+        Instruction::CREATE2 => {
+            let base = G_CREATE;
+            let init_code_len = state.stack.peek(2).unwrap().as_u64();
+            let sha_addup = G_SHA3WORD * (init_code_len as f32 / 32.0).ceil() as usize;
+            (base + sha_addup).into()
+        },
         Instruction::JUMPDEST => G_JUMPDEST.into(),
         Instruction::SLOAD => P::gas_sload(),
 
