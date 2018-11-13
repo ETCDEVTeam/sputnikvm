@@ -17,7 +17,6 @@ script:
 matrix:
   allow_failures:
     - rust: nightly
-    - rust: beta
 
 before_deploy:
   - sh .ci/before_deploy.sh
