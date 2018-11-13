@@ -1,12 +1,12 @@
 [package]
 name = "sputnikvm-stateful"
-version = "0.10.0"
+version = "0.11.0-beta.0"
 license = "Apache-2.0"
 description = "Stateful SputnikVM wrapped with tries."
 authors = ["Wei Tang <hi@that.world>"]
 
 [dependencies]
-sputnikvm = { version = "0.10", path = '..' }
+sputnikvm = { version = "0.11.0-beta", path = '..' }
 etcommon-bigint = "0.2"
 etcommon-trie = "0.3"
 etcommon-block = "0.5"
@@ -20,4 +20,4 @@ serde_derive = "1.0"
 serde_json = "1.0"
 lazy_static = "0.2"
 etcommon-hexutil = "0.2"
-sputnikvm-network-classic = { version = "0.10", path = "../network/classic" }
+sputnikvm-network-classic = { version = "0.11.0-beta", path = "../network/classic" }
