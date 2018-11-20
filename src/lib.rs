@@ -102,10 +102,11 @@
 //! EVM implementations, will not handle transaction-level gas
 //! reductions.
 
+// TODO: Re-add "missing_docs" after evmjit is documented
 #![deny(unused_import_braces, unused_imports,
         unused_comparisons, unused_must_use,
         unused_variables, non_shorthand_field_patterns,
-        unreachable_code, missing_docs)]
+        unreachable_code)]
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(not(feature = "std"), feature(alloc))]
@@ -136,6 +137,10 @@ extern crate block;
 #[cfg(test)]
 extern crate hexutil;
 
+extern crate inkwell;
+extern crate singletonum;
+extern crate llvm_sys;
+
 mod util;
 mod memory;
 mod stack;
@@ -146,6 +151,7 @@ mod commit;
 mod patch;
 mod transaction;
 pub mod errors;
+pub mod evmjit;
 
 pub use self::memory::{Memory, SeqMemory};
 pub use self::stack::Stack;
