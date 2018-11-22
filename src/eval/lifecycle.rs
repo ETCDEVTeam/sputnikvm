@@ -65,6 +65,13 @@ impl<M: Memory + Default, P: Patch> Machine<M, P> {
     pub fn initialize_create(&mut self, preclaimed_value: U256) -> Result<(), RequireError> {
         self.state.account_state.require(self.state.context.address)?;
 
+        debug!("initialize_create: caller({:x?}), address({:x?}), preclaimed_value({:x?}), value({:x?})",
+               self.state.context.caller,
+               self.state.context.address,
+               preclaimed_value,
+               self.state.context.value,
+        );
+
         if !self.state.context.is_system {
             self.state.account_state.decrease_balance(self.state.context.caller, preclaimed_value);
             self.state.account_state.decrease_balance(self.state.context.caller, self.state.context.value);

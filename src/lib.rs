@@ -284,6 +284,10 @@ impl<M: Memory + Default, P: Patch> ContextVM<M, P> {
         context: Context, block: HeaderParams,
         account_state: AccountState<P::Account>, blockhash_state: BlockhashState,
         f: F) -> Self {
+        debug!("ContextVM created");
+        debug!("context: {:#?}", context);
+        debug!("block: {:#?}", block);
+        debug!("blockchain_state: {:#?}", blockhash_state);
         let mut vm = Self::with_states(context, block, account_state, blockhash_state);
         f(&mut vm);
         vm.fresh_account_state = vm.machines[0].state().account_state.clone();

@@ -694,6 +694,8 @@ impl<A: AccountPatch> AccountState<A> {
     /// Decrease the balance of an account. The account will be
     /// created if it is nonexist in the beginning.
     pub fn decrease_balance(&mut self, address: Address, withdraw: U256) {
+        let balance = self.balance(address);
+        trace!("decrease_balance: current({:x?}), withdraw({:x?})", balance, withdraw);
         let account = match self.accounts.remove(&address) {
             Some(AccountChange::Full {
                 address,
