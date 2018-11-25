@@ -39,13 +39,26 @@ const G_BLOCKHASH: usize = 20;
 const G_EXTCODEHASH: usize = 400;
 
 fn sstore_cost<M: Memory + Default, P: Patch>(state: &State<M, P>) -> Gas {
-    let index: U256 = state.stack.peek(0).unwrap().into();
-    let value = state.stack.peek(1).unwrap();
     let address = state.context.address;
+    let index: U256 = match state.stack.peek(0) {
+        Ok(s) => s.into(),
+        _ => return Gas::zero()
+    };
+    let value = match state.stack.peek(1) {
+        Ok(s) => s,
+        _ => return Gas::zero()
+    };
+    let current = match state.account_state.storage_read(address, index) {
+        Ok(s) => s,
+        _ => return Gas::zero()
+    };
 
     if P::has_reduced_sstore_gas_metering() {
-        let orig = state.account_state.storage_read_orig(address, index).unwrap();
-        let current = state.account_state.storage_read(address, index).unwrap();
+        let orig = match state.account_state.storage_read_orig(address, index) {
+            Ok(s) => s,
+            _ => return Gas::zero()
+        };
+
         if value == current {
             G_SNOOP.into()
         } else {
@@ -60,7 +73,7 @@ fn sstore_cost<M: Memory + Default, P: Patch>(state: &State<M, P>) -> Gas {
             }
         }
     } else {
-        if value != M256::zero() && state.account_state.storage_read(address, index).unwrap() == M256::zero() {
+        if value != M256::zero() && current == M256::zero() {
             G_SSET.into()
         } else {
             G_SRESET.into()
@@ -294,13 +307,25 @@ pub fn gas_stipend<M: Memory + Default, P: Patch>(instruction: Instruction, stat
 pub fn gas_refund<M: Memory + Default, P: Patch>(instruction: Instruction, state: &State<M, P>) -> isize {
     match instruction {
         Instruction::SSTORE => {
-            let index: U256 = state.stack.peek(0).unwrap().into();
-            let value = state.stack.peek(1).unwrap();
             let address = state.context.address;
+            let index: U256 = match state.stack.peek(0) {
+                Ok(s) => s.into(),
+                _ => return 0
+            };
+            let value = match state.stack.peek(1) {
+                Ok(s) => s,
+                _ => return 0
+            };
+            let current = match state.account_state.storage_read(address, index) {
+                Ok(s) => s,
+                _ => return 0
+            };
 
             if P::has_reduced_sstore_gas_metering() {
-                let orig = state.account_state.storage_read_orig(address, index).unwrap();
-                let current = state.account_state.storage_read(address, index).unwrap();
+                let orig = match state.account_state.storage_read_orig(address, index) {
+                    Ok(s) => s,
+                    _ => return 0
+                };
                 let mut refund = 0;
 
                 if value != current {
@@ -329,7 +354,7 @@ pub fn gas_refund<M: Memory + Default, P: Patch>(instruction: Instruction, state
 
                 refund
             } else {
-                if value == M256::zero() && state.account_state.storage_read(address, index).unwrap() != M256::zero() {
+                if value == M256::zero() && current != M256::zero() {
                     R_SRESET
                 } else {
                     0
