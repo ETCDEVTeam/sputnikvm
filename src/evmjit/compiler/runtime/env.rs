@@ -1,13 +1,11 @@
 #![allow(dead_code)]
 
-#[cfg(test)]
-use std::ffi::CString;
-
 use singletonum::{Singleton, SingletonInit};
 use inkwell::context::Context;
 use inkwell::types::StructType;
 use inkwell::types::PointerType;
 use inkwell::AddressSpace;
+use std::ffi::CString;
 
 #[derive(Debug, Singleton)]
 
@@ -40,6 +38,35 @@ impl EnvDataType {
     pub fn get_ptr_type(&self) -> PointerType {
         self.env_ptr_type
     }
+
+    pub fn is_env_data_type(a_struct: &StructType) -> bool {
+        if a_struct.count_fields() != 0 {
+            println!("is_env_data_type: count_fields() test failed!");
+            return false;
+        }
+
+        if a_struct.is_sized() {
+            println!("is_env_data_type: is_sized() test failed!");
+            return false;
+        }
+        
+        if a_struct.is_packed() {
+            println!("is_env_data_type: is_packed() test failed!");
+            return false;
+        }
+            
+        if !a_struct.is_opaque() {
+            println!("is_env_data_type: is_opaque() test failed!");
+            return false;
+        }
+        
+        if a_struct.get_name() != Some(&*CString::new("Env").unwrap()) {
+            println!("is_env_data_type: get_name() test failed!");
+            return false;
+        }
+
+        return true;
+    }
 }
 
 #[test]
@@ -54,6 +81,8 @@ fn test_env_data_type() {
     assert_eq!(env_data_t.get_name(), Some(&*CString::new("Env").unwrap()));
     assert_eq!(env_data_t.count_fields(), 0);
 
+    assert!(EnvDataType::is_env_data_type(&env_data_t));
+    
     let env_data_ptr_t = env_data_type_singleton.get_ptr_type();
     assert_eq!(env_data_ptr_t.get_address_space(), AddressSpace::Generic);
     assert_eq!(env_data_ptr_t.get_element_type().into_struct_type(), env_data_t);

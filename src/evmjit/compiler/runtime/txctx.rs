@@ -1,7 +1,5 @@
 #![allow(dead_code)]
 
-#[cfg(test)]
-use std::ffi::CString;
 use singletonum::{Singleton, SingletonInit};
 use inkwell::context::Context;
 use inkwell::builder::Builder;
@@ -16,6 +14,7 @@ use inkwell::AddressSpace;
 use evmjit::compiler::runtime::env::EnvDataType;
 use evmjit::compiler::evmtypes::EvmTypes;
 use llvm_sys::LLVMCallConv::*;
+use std::ffi::CString;
 
 #[derive(PartialEq)]
 pub enum TransactionContextTypeFields {
@@ -94,7 +93,112 @@ impl TransactionContextType {
     pub fn get_num_fields(&self) -> u32 {
         self.get_type().count_fields()
     }
-    
+
+    pub fn is_transaction_context_type(a_struct: &StructType) -> bool {
+        if !a_struct.is_sized() {
+            return false;
+        }
+        
+        if a_struct.count_fields() != 7 {
+            return false;
+        }
+        
+        if a_struct.is_packed() {
+            return false;
+        }
+            
+        if a_struct.is_opaque() {
+            return false;
+        }
+        
+        if a_struct.get_name() != Some(&*CString::new("evm.txctx").unwrap()) {
+            return false;
+        }
+
+        let field1 = a_struct.get_field_type_at_index(0).unwrap();
+        if !field1.is_int_type() {
+            return false;
+        }
+        
+        if field1.into_int_type().get_bit_width() != 256 {
+            return false;
+        }
+        
+        let field2 = a_struct.get_field_type_at_index(1).unwrap();
+        if !field2.is_array_type() {
+            return false;
+        }
+        
+        let array_type2 = field2.into_array_type();
+        if array_type2.len() != 20 {
+            return false;
+        }
+            
+        if !array_type2.get_element_type().is_int_type() {
+            return false;
+        }
+            
+        if array_type2.get_element_type().into_int_type().get_bit_width() != 8 {
+            return false
+        }
+
+        let field3 = a_struct.get_field_type_at_index(2).unwrap();
+        if !field3.is_array_type() {
+            return false;
+        }
+        
+        let array_type3 = field3.into_array_type();
+        if array_type3.len() != 20 {
+            return false;
+        }
+            
+        if !array_type3.get_element_type().is_int_type() {
+            return false;
+        }
+            
+        if array_type3.get_element_type().into_int_type().get_bit_width() != 8 {
+            return false
+        }
+
+        
+        let field4 = a_struct.get_field_type_at_index(3).unwrap();
+        if !field4.is_int_type() {
+            return false;
+        }
+        
+        if field4.into_int_type().get_bit_width() != 64 {
+            return false;
+        }
+ 
+        let field5 = a_struct.get_field_type_at_index(4).unwrap();
+        if !field5.is_int_type() {
+            return false;
+        }
+                
+        if field5.into_int_type().get_bit_width() != 64 {
+            return false;
+        }
+ 
+        let field6 = a_struct.get_field_type_at_index(5).unwrap();
+        if !field6.is_int_type() {
+            return false;
+        }
+        
+        if field6.into_int_type().get_bit_width() != 64 {
+            return false;
+        }
+ 
+        let field7 = a_struct.get_field_type_at_index(6).unwrap();
+        if !field7.is_int_type() {
+            return false;
+        }
+        
+        if field7.into_int_type().get_bit_width() != 256 {
+            return false;
+        }
+
+        true
+    }
 }
 
 
@@ -179,7 +283,7 @@ impl<'a> TransactionContextManager<'a> {
         unsafe {
             let mut ptr = self.m_builder.build_struct_gep(self.m_tx_ctx, index as u32, "");
 
-            // Origin and Coinbase are decalred as arrays of 20 bytes (160 bits) to deal with alignment issues
+            // Origin and Coinbase are declared as arrays of 20 bytes (160 bits) to deal with alignment issues
             // Cast back to i160 pointer here
             
             if field ==  TransactionContextTypeFields::Origin || field == TransactionContextTypeFields::CoinBase {
@@ -193,24 +297,83 @@ impl<'a> TransactionContextManager<'a> {
 }
 
 
-
-#[test]
-fn test_tx_ctx_type() {
-    let context = Context::create();
-    let tx_ctx_type_singleton = TransactionContextType::get_instance(&context);
-    let tx_ctx = tx_ctx_type_singleton.get_type();
-    assert!(!tx_ctx.is_packed());
-    assert!(!tx_ctx.is_opaque());
-    assert!(tx_ctx.is_sized());
-    assert_eq!(tx_ctx.get_name(), Some(&*CString::new("evm.txctx").unwrap()));
-    assert_eq!(tx_ctx.count_fields(), 7);
-
-    let i64_t = context.i64_type();
-    let array_of_160_bytes_t = context.i8_type().array_type(20);
-    let evm_word_t = context.custom_width_int_type(256);
+#[cfg(test)]
+mod tests {
+    //use std::ffi::CString;
+    use super::*;
     
-    assert_eq!(tx_ctx.get_field_types(), &[evm_word_t.into(), array_of_160_bytes_t.into(),
-                                           array_of_160_bytes_t.into(), i64_t.into(),
-                                           i64_t.into(), i64_t.into(),
-                                           evm_word_t.into()]);
+    
+    #[test]
+    fn test_data_field_to_index() {
+        assert_eq!(TransactionContextTypeFields::GasPrice.to_index(), 0);
+        assert_eq!(TransactionContextTypeFields::Origin.to_index(), 1);
+        assert_eq!(TransactionContextTypeFields::CoinBase.to_index(), 2);
+        assert_eq!(TransactionContextTypeFields::Number.to_index(), 3);
+        assert_eq!(TransactionContextTypeFields::TimeStamp.to_index(), 4);
+        assert_eq!(TransactionContextTypeFields::GasLimit.to_index(), 5);
+        assert_eq!(TransactionContextTypeFields::Difficulty.to_index(), 6);
+    }
+
+    #[test]
+    fn test_tx_ctx_type() {
+        let context = Context::create();
+        let tx_ctx_type_singleton = TransactionContextType::get_instance(&context);
+        let tx_ctx = tx_ctx_type_singleton.get_type();
+
+        assert!(TransactionContextType::is_transaction_context_type (&tx_ctx));
+    }
+
+    #[test]
+    fn test_transaction_context_manager() {
+        use super::super::MainFuncCreator;
+        let context = Context::create();
+        let module = context.create_module("my_module");
+        let builder = context.create_builder();
+
+        // Need to create main function before TransactionConextManager otherwise we will crash
+        MainFuncCreator::new ("main", &context, &builder, &module);
+        
+        TransactionContextManager::new(&context, &builder, &module);
+        let load_tx_ctx_fn_optional = module.get_function ("loadTxCtx");
+        assert!(load_tx_ctx_fn_optional != None);
+
+        let load_tx_ctx_fn = load_tx_ctx_fn_optional.unwrap();
+        assert!(load_tx_ctx_fn.get_linkage() == Private);
+        assert!(load_tx_ctx_fn.count_basic_blocks() == 3);
+        assert!(load_tx_ctx_fn.count_params() == 3);
+
+        let func_parm1_opt = load_tx_ctx_fn.get_nth_param(0);
+        assert!(!func_parm1_opt.is_none());
+
+        // Verify paramter 1 is pointer to int1
+        let func_parm1_t = func_parm1_opt.unwrap().get_type();
+        assert!(func_parm1_t.is_pointer_type());
+        let funct_param1_elem_t = func_parm1_t.as_pointer_type().get_element_type();
+        assert!(funct_param1_elem_t.is_int_type());
+        assert_eq!(funct_param1_elem_t.as_int_type().get_bit_width(), 1);
+
+        // Verify parameter 2 is pointer to TransactionContext
+        let func_parm2_opt = load_tx_ctx_fn.get_nth_param(1);
+        assert!(!func_parm2_opt.is_none());
+        let func_parm2_t = func_parm2_opt.unwrap().get_type();
+        assert!(func_parm2_t.is_pointer_type());
+        let funct_param2_elem_t = func_parm2_t.as_pointer_type().get_element_type();
+        assert!(funct_param2_elem_t.is_struct_type());
+
+        let the_struct_type = funct_param2_elem_t.as_struct_type();
+        assert!(TransactionContextType::is_transaction_context_type (&the_struct_type));
+
+        // Verify parameter 3 is pointer to EnvDataType
+        let func_parm3_opt = load_tx_ctx_fn.get_nth_param(2);
+        assert!(!func_parm3_opt.is_none());
+        let func_parm3_t = func_parm3_opt.unwrap().get_type();
+        assert!(func_parm3_t.is_pointer_type());
+        let funct_param3_elem_t = func_parm3_t.as_pointer_type().get_element_type();
+        assert!(funct_param3_elem_t.is_struct_type());
+
+        let the_struct_type2 = funct_param3_elem_t.as_struct_type();
+        assert!(EnvDataType::is_env_data_type (&the_struct_type2));
+
+    }
+    
 }

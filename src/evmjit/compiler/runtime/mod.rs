@@ -20,6 +20,7 @@ use self::rt_data_type::RuntimeDataType;
 use self::rt_type::RuntimeType;
 use self::rt_type::RuntimeTypeManager;
 use self::txctx::TransactionContextManager;
+use self::stack_init::StackAllocator;
 use evmjit::compiler::evmtypes::EvmTypes;
 
 pub struct MainFuncCreator {
@@ -84,7 +85,8 @@ pub struct RuntimeManager<'a> {
     m_module: &'a Module,
     m_txctx_manager:  TransactionContextManager<'a>,
     m_rt_type_manager: RuntimeTypeManager,
-    m_main_func_creator: MainFuncCreator 
+    m_main_func_creator: MainFuncCreator, 
+    m_stack_allocator: StackAllocator
 }
 
 impl<'a> RuntimeManager<'a> {
@@ -98,6 +100,8 @@ impl<'a> RuntimeManager<'a> {
 
         // Generate IR for runtime type related items
         let rt_type_manager = RuntimeTypeManager::new (&context, &builder);
+
+        let stack_allocator = StackAllocator::new (&context, &builder, &module);
         
         RuntimeManager {
             m_context : context,
@@ -105,7 +109,8 @@ impl<'a> RuntimeManager<'a> {
             m_module : module,
             m_txctx_manager: txctx_manager,
             m_rt_type_manager: rt_type_manager,
-            m_main_func_creator: main_func_creator
+            m_main_func_creator: main_func_creator,
+            m_stack_allocator: stack_allocator
         }
     }
 

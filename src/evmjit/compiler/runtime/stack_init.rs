@@ -10,13 +10,13 @@ use evmjit::compiler::stack::EVM_MAX_STACK_SIZE;
 use inkwell::module::Linkage::*;
 use singletonum::Singleton;
 
-pub struct StackInit {
+pub struct StackAllocator {
     stack_base : BasicValueEnum,
     stack_size_ptr : PointerValue,
 }
 
-impl StackInit {
-    pub fn new(context: & Context, builder: &Builder, module: &Module) -> StackInit {
+impl StackAllocator {
+    pub fn new(context: & Context, builder: &Builder, module: &Module) -> StackAllocator {
         let types_instance = EvmTypes::get_instance(context);
         let malloc_fn_type = types_instance.get_word_ptr_type().fn_type(&[types_instance.get_size_type().into()], false);
 
@@ -35,7 +35,7 @@ impl StackInit {
         let size_ptr = builder.build_alloca (types_instance.get_size_type(), "stack.size");
         builder.build_store (size_ptr, context.i64_type().const_zero());
 
-        StackInit {
+        StackAllocator {
             stack_base: base.try_as_basic_value().left().unwrap(),
             stack_size_ptr: size_ptr
         }
