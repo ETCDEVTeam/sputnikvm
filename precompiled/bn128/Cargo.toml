@@ -9,11 +9,11 @@ repository = "https://github.com/ETCDEVTeam/sputnikvm"
 [dependencies]
 sputnikvm = { version = "0.10", path = "../..", default-features = false }
 etcommon-bigint = { version = "0.2", default-features = false }
-bn-plus = { version = "0.4" }
+bn = { version = "0.4", git = "https://github.com/ETC-Labs/bn.git", branch = "master", default-features = false }
 
 [features]
 default = ["std", "c-secp256k1"]
 rlp = ["etcommon-bigint/rlp"]
 c-secp256k1 = ["sputnikvm/c-secp256k1"]
 rust-secp256k1 = ["sputnikvm/rust-secp256k1"]
-std = ["sputnikvm/std"]
+std = ["sputnikvm/std", "bn/std"]
