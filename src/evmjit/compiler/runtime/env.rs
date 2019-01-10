@@ -41,27 +41,22 @@ impl EnvDataType {
 
     pub fn is_env_data_type(a_struct: &StructType) -> bool {
         if a_struct.count_fields() != 0 {
-            println!("is_env_data_type: count_fields() test failed!");
             return false;
         }
 
         if a_struct.is_sized() {
-            println!("is_env_data_type: is_sized() test failed!");
             return false;
         }
         
         if a_struct.is_packed() {
-            println!("is_env_data_type: is_packed() test failed!");
             return false;
         }
             
         if !a_struct.is_opaque() {
-            println!("is_env_data_type: is_opaque() test failed!");
             return false;
         }
         
         if a_struct.get_name() != Some(&*CString::new("Env").unwrap()) {
-            println!("is_env_data_type: get_name() test failed!");
             return false;
         }
 

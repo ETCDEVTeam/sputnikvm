@@ -6,10 +6,11 @@ use inkwell::context::Context;
 use inkwell::types::StructType;
 use inkwell::types::PointerType;
 use inkwell::AddressSpace;
+use evmjit::BasicTypeEnumCompare;
 
-const NUM_RUNTIME_DATA_FIELDS: usize = 10;
+pub const NUM_RUNTIME_DATA_FIELDS: usize = 10;
 
-enum RuntimeDataTypeFields {
+pub enum RuntimeDataTypeFields {
     Gas,
     GasPrice,
     CallData,
@@ -24,7 +25,7 @@ enum RuntimeDataTypeFields {
     ReturnDataSize   // Return data size, used only on RETURN
 }
 
-trait RuntimeDataFieldToIndex {
+pub trait RuntimeDataFieldToIndex {
     fn to_index(&self) -> usize;
 }
 
@@ -48,13 +49,13 @@ impl RuntimeDataFieldToIndex for RuntimeDataTypeFields {
 
 }
 
-trait RuntimeDataFieldToName {
-    fn to_name(&mut self, field: RuntimeDataTypeFields) -> &'static str;
+pub trait RuntimeDataFieldToName {
+    fn to_name(&mut self) -> &'static str;
 }
 
 impl RuntimeDataFieldToName for RuntimeDataTypeFields {
-    fn to_name(&mut self, field: RuntimeDataTypeFields) -> &'static str {
-        match field {
+    fn to_name(&mut self) -> &'static str {
+        match self {
             RuntimeDataTypeFields::Gas => "msg.gas",
             RuntimeDataTypeFields::GasPrice => "tx.gasprice",
             RuntimeDataTypeFields::CallData => "msg.data.ptr",
@@ -63,12 +64,13 @@ impl RuntimeDataFieldToName for RuntimeDataTypeFields {
             RuntimeDataTypeFields::Code => "code.ptr",
             RuntimeDataTypeFields::CodeSize => "code.size",
             RuntimeDataTypeFields::Address => "msg.address",
-            RuntimeDataTypeFields::Sender => "message.sender",
+            RuntimeDataTypeFields::Sender => "msg.sender",
             RuntimeDataTypeFields::Depth => "msg.depth",
             RuntimeDataTypeFields::ReturnData => "", 
             RuntimeDataTypeFields::ReturnDataSize => "",
         }
     }
+
 }
 
 #[derive(Debug, Singleton)]
@@ -120,6 +122,82 @@ impl RuntimeDataType {
     pub fn get_ptr_type(&self) -> PointerType {
         self.rt_ptr_type
     }
+
+    pub fn is_rt_data_type(a_struct: &StructType) -> bool {
+        if !a_struct.is_sized() {
+            return false;
+        }
+
+        if a_struct.count_fields() != 10 {
+            return false;
+        }
+
+        if a_struct.is_packed() {
+            return false;
+        }
+
+        if a_struct.is_opaque() {
+            return false;
+        }
+
+        if a_struct.get_name() != Some(&*CString::new("RuntimeData").unwrap()) {
+            return false;
+        }
+
+        let field1 = a_struct.get_field_type_at_index(0).unwrap();
+
+        if !field1.is_int64() {
+            return false;
+        }
+
+        let field2 = a_struct.get_field_type_at_index(1).unwrap();
+        if !field2.is_int64() {
+            return false;
+        }
+
+        let field3 = a_struct.get_field_type_at_index(2).unwrap();
+        if !field3.is_ptr_to_int8() {
+            return false;
+        }
+
+        let field4 = a_struct.get_field_type_at_index(3).unwrap();
+        if !field4.is_int64() {
+            return false;
+        }
+
+        let field5 = a_struct.get_field_type_at_index(4).unwrap();
+        if !field5.is_int256() {
+            return false;
+        }
+
+        let field6 = a_struct.get_field_type_at_index(5).unwrap();
+        if !field6.is_ptr_to_int8() {
+            return false;
+        }
+
+        let field7 = a_struct.get_field_type_at_index(6).unwrap();
+        if !field7.is_int64() {
+            return false;
+        }
+
+        let field8 = a_struct.get_field_type_at_index(7).unwrap();
+        if !field8.is_int256() {
+            return false;
+        }
+
+        let field9 = a_struct.get_field_type_at_index(8).unwrap();
+        if !field9.is_int256() {
+            return false;
+        }
+
+        let field10 = a_struct.get_field_type_at_index(9).unwrap();
+        if !field10.is_int64() {
+            return false;
+        }
+
+        true
+    }
+
 }
 
 #[test]
@@ -139,23 +217,53 @@ fn test_data_field_to_index() {
     assert_eq!(RuntimeDataTypeFields::ReturnDataSize.to_index(), RuntimeDataTypeFields::CallDataSize.to_index());
 }
 
+#[test]
+
+fn test_data_field_to_name() {
+    assert_eq!(RuntimeDataTypeFields::Gas.to_name(), "msg.gas");
+    assert_eq!(RuntimeDataTypeFields::GasPrice.to_name(), "tx.gasprice");
+    assert_eq!(RuntimeDataTypeFields::CallData.to_name(), "msg.data.ptr");
+    assert_eq!(RuntimeDataTypeFields::CallDataSize.to_name(), "msg.data.size");
+    assert_eq!(RuntimeDataTypeFields::Value.to_name(), "msg.value");
+    assert_eq!(RuntimeDataTypeFields::Code.to_name(), "code.ptr");
+    assert_eq!(RuntimeDataTypeFields::CodeSize.to_name(), "code.size");
+    assert_eq!(RuntimeDataTypeFields::Address.to_name(), "msg.address");
+    assert_eq!(RuntimeDataTypeFields::Sender.to_name(), "msg.sender");
+    assert_eq!(RuntimeDataTypeFields::Depth.to_name(), "msg.depth");
+
+}
+
+#[test]
+
 fn test_runtime_data_type() {
     let context = Context::create();
     let rt_data_type_singleton = RuntimeDataType::get_instance(&context);
     let rt_struct = rt_data_type_singleton.get_type();
-    assert!(!rt_struct.is_packed());
-    assert!(!rt_struct.is_opaque());
-    assert!(rt_struct.is_sized());
-    assert_eq!(rt_struct.get_name(), Some(&*CString::new("RuntimeData").unwrap()));
-    assert_eq!(rt_struct.count_fields(), 10);
 
+    assert!(RuntimeDataType::is_rt_data_type (&rt_struct));
+
+    // Test for inequality of RuntimeData
     let size_t = context.i64_type();
     let byte_ptr_t = context.i8_type().ptr_type(AddressSpace::Generic);
     let evm_word_t = context.custom_width_int_type(256);
-    
-    assert_eq!(rt_struct.get_field_types(), &[size_t.into(), size_t.into(),
-                                              byte_ptr_t.into(), size_t.into(),
-                                              evm_word_t.into(), byte_ptr_t.into(),
-                                              size_t.into(), evm_word_t.into(),
-                                              evm_word_t.into(), size_t.into()]);
+    let fields = [size_t.into(),      // gas
+                  size_t.into(),      // gas price
+                  byte_ptr_t.into(),  // calldata
+                  size_t.into(),      // calldata size
+                  evm_word_t.into(),  // apparent value
+                  byte_ptr_t.into(),  // pointer to evm byte code
+                  size_t.into(),      // size of evm byte code
+                  evm_word_t.into(),  // address
+                  evm_word_t.into(),  // caller address
+                  evm_word_t.into()];     // call depth
+
+    let rt_struct2 = context.opaque_struct_type("RuntimeData");
+    rt_struct2.set_body(&fields, false);
+    assert!(!RuntimeDataType::is_rt_data_type (&rt_struct2));
+
+    // Test that we have a pointer to RuntimeData
+
+    let rt_struct_ptr = rt_data_type_singleton.get_ptr_type();
+    assert!(rt_struct_ptr.get_element_type().is_struct_type());
+    assert!(RuntimeDataType::is_rt_data_type (rt_struct_ptr.get_element_type().as_struct_type()));
 }

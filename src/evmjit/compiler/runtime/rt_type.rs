@@ -13,6 +13,20 @@ use inkwell::AddressSpace;
 use super::super::memory::mem_representation::MemoryRepresentationType;
 use super::env::EnvDataType;
 use super::rt_data_type::RuntimeDataType;
+use super::rt_data_type::RuntimeDataFieldToIndex;
+use super::rt_data_type::RuntimeDataFieldToName;
+use super::rt_data_type::RuntimeDataTypeFields::Gas;
+use super::rt_data_type::RuntimeDataTypeFields::GasPrice;
+use super::rt_data_type::RuntimeDataTypeFields::CallData;
+use super::rt_data_type::RuntimeDataTypeFields::CallDataSize;
+use super::rt_data_type::RuntimeDataTypeFields::Value;
+use super::rt_data_type::RuntimeDataTypeFields::Code;
+use super::rt_data_type::RuntimeDataTypeFields::CodeSize;
+use super::rt_data_type::RuntimeDataTypeFields::Address;
+use super::rt_data_type::RuntimeDataTypeFields::Sender;
+use super::rt_data_type::RuntimeDataTypeFields::Depth;
+
+//use super::rt_data_type::NUM_RUNTIME_DATA_FIELDS;
 
 #[derive(Debug, Singleton)]
 
@@ -60,6 +74,7 @@ pub struct RuntimeTypeManager {
     m_data_ptr: BasicValueEnum,
     m_mem_ptr: PointerValue,
     m_env_ptr: BasicValueEnum,
+    m_rt_data_elts: [BasicValueEnum; 10],
 }
 
 impl RuntimeTypeManager {
@@ -71,15 +86,48 @@ impl RuntimeTypeManager {
             assert_eq!(data_p.get_type().into_pointer_type(), RuntimeDataType::get_instance(context).get_ptr_type());
 
             let mem_p = builder.build_struct_gep(rt_ptr.into_pointer_value(), 2, "mem");
+
             assert_eq!(mem_p.get_type(), MemoryRepresentationType::get_instance(&context).get_ptr_type());
 
             let env_p = builder.build_load (builder.build_struct_gep(rt_ptr.into_pointer_value(), 1, ""), "env");
             assert_eq!(env_p.get_type().into_pointer_type(), EnvDataType::get_instance(&context).get_ptr_type());
 
+            let data = builder.build_load (*data_p.as_pointer_value(), "data");
+
             RuntimeTypeManager {
                 m_data_ptr: data_p,
                 m_mem_ptr: mem_p,
                 m_env_ptr: env_p,
+                m_rt_data_elts: [builder.build_extract_value(data.into_struct_value(),
+                                                             Gas.to_index() as u32,
+                                                             Gas.to_name()),
+                                 builder.build_extract_value(data.into_struct_value(),
+                                                             GasPrice.to_index() as u32,
+                                                             GasPrice.to_name()),
+                                 builder.build_extract_value(data.into_struct_value(),
+                                                             CallData.to_index() as u32,
+                                                             CallData.to_name()),
+                                 builder.build_extract_value(data.into_struct_value(),
+                                                             CallDataSize.to_index() as u32,
+                                                             CallDataSize.to_name()),
+                                 builder.build_extract_value(data.into_struct_value(),
+                                                             Value.to_index() as u32,
+                                                             Value.to_name()),
+                                 builder.build_extract_value(data.into_struct_value(),
+                                                             Code.to_index() as u32,
+                                                             Code.to_name()),
+                                 builder.build_extract_value(data.into_struct_value(),
+                                                             CodeSize.to_index() as u32,
+                                                             CodeSize.to_name()),
+                                 builder.build_extract_value(data.into_struct_value(),
+                                                             Address.to_index() as u32,
+                                                             Address.to_name()),
+                                 builder.build_extract_value(data.into_struct_value(),
+                                                             Sender.to_index() as u32,
+                                                             Sender.to_name()),
+                                 builder.build_extract_value(data.into_struct_value(),
+                                                             Depth.to_index() as u32,
+                                                             Depth.to_name())],
             }
         }
     }
@@ -101,6 +149,34 @@ impl RuntimeTypeManager {
         assert_eq!(runtime_ptr.get_type().into_pointer_type(), RuntimeType::get_instance(context).get_ptr_type());
 
         runtime_ptr
+    }
+
+    pub fn get_env_ptr(self) -> BasicValueEnum {
+        self.m_env_ptr
+    }
+
+    pub fn get_data_ptr(self) -> BasicValueEnum {
+        self.m_data_ptr
+    }
+
+    pub fn get_mem_ptr(self) -> PointerValue {
+        self.m_mem_ptr
+    }
+
+    pub fn get_address(self) -> BasicValueEnum {
+        self.m_rt_data_elts[Address.to_index()]
+    }
+
+    pub fn get_sender(self) -> BasicValueEnum {
+        self.m_rt_data_elts[Sender.to_index()]
+    }
+
+    pub fn get_value(self) -> BasicValueEnum {
+        self.m_rt_data_elts[Value.to_index()]
+    }
+
+    pub fn get_depth(self) -> BasicValueEnum {
+        self.m_rt_data_elts[Depth.to_index()]
     }
 
 }
