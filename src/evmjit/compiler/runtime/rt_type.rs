@@ -1,6 +1,5 @@
 #![allow(dead_code)]
 
-#[cfg(test)]
 use std::ffi::CString;
 use singletonum::{Singleton, SingletonInit};
 use inkwell::context::Context;
@@ -67,6 +66,68 @@ impl RuntimeType {
 
     pub fn get_ptr_type(&self) -> PointerType {
         self.rt_ptr_type
+    }
+
+    pub fn is_runtime_type(a_struct: &StructType) -> bool {
+        if !a_struct.is_sized() {
+            return false;
+        }
+
+        if a_struct.count_fields() != 3 {
+            return false;
+        }
+
+        if a_struct.is_packed() {
+            return false;
+        }
+
+        if a_struct.is_opaque() {
+            return false;
+        }
+
+        if a_struct.get_name() != Some(&*CString::new("Runtime").unwrap()) {
+            return false;
+        }
+
+        let field1 = a_struct.get_field_type_at_index(0).unwrap();
+        if !field1.is_pointer_type() {
+            return false;
+        }
+
+        let field1_element_t = field1.as_pointer_type().get_element_type();
+        if !field1_element_t.is_struct_type() {
+            return false;
+        }
+
+        if !RuntimeDataType::is_rt_data_type(&field1_element_t.as_struct_type()) {
+            return false;
+        }
+
+        let field2 = a_struct.get_field_type_at_index(1).unwrap();
+        if !field2.is_pointer_type() {
+            return false;
+        }
+
+        let field2_element_t = field2.as_pointer_type().get_element_type();
+        if !field2_element_t.is_struct_type() {
+            return false;
+        }
+
+        if !EnvDataType::is_env_data_type(&&field2_element_t.as_struct_type()) {
+            return false;
+        }
+
+        let field3 = a_struct.get_field_type_at_index(2).unwrap();
+        if !field3.is_struct_type() {
+            return false;
+        }
+
+        let field3_element_t = field3.as_struct_type();
+        if !MemoryRepresentationType::is_mem_representation_type(&field3_element_t) {
+            return false;
+        }
+
+        true
     }
 }
 
@@ -187,15 +248,6 @@ fn test_runtime_type() {
     let context = Context::create();
     let rt_type_singleton = RuntimeType::get_instance(&context);
     let rt_struct = rt_type_singleton.get_type();
-    assert!(!rt_struct.is_packed());
-    assert!(!rt_struct.is_opaque());
-    assert!(rt_struct.is_sized());
-    assert_eq!(rt_struct.get_name(), Some(&*CString::new("Runtime").unwrap()));
-    assert_eq!(rt_struct.count_fields(), 3);
 
-    let rt_data_ptr = RuntimeDataType::get_instance(&context).get_ptr_type();
-    let env_ptr = EnvDataType::get_instance(&context).get_ptr_type();
-    let mem_ptr = MemoryRepresentationType::get_instance(&context).get_type();
-
-    assert_eq!(rt_struct.get_field_types(), &[rt_data_ptr.into(), env_ptr.into(), mem_ptr.into()]);
+    assert!(RuntimeType::is_runtime_type(&rt_struct));
 }
