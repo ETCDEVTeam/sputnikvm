@@ -70,15 +70,9 @@ fn test_env_data_type() {
     let env_data_type_singleton = EnvDataType::get_instance(&context);
     let env_data_t = env_data_type_singleton.get_type();
 
-    assert!(!env_data_t.is_packed());
-    assert!(env_data_t.is_opaque());
-    assert!(!env_data_t.is_sized());
-    assert_eq!(env_data_t.get_name(), Some(&*CString::new("Env").unwrap()));
-    assert_eq!(env_data_t.count_fields(), 0);
-
     assert!(EnvDataType::is_env_data_type(&env_data_t));
     
     let env_data_ptr_t = env_data_type_singleton.get_ptr_type();
-    assert_eq!(env_data_ptr_t.get_address_space(), AddressSpace::Generic);
-    assert_eq!(env_data_ptr_t.get_element_type().into_struct_type(), env_data_t);
+    assert!(env_data_ptr_t.get_element_type().is_struct_type());
+    assert!(EnvDataType::is_env_data_type (env_data_ptr_t.get_element_type().as_struct_type()));
 }
