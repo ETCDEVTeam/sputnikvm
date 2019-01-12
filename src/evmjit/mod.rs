@@ -1,5 +1,9 @@
+use singletonum::{Singleton, SingletonInit};
 use inkwell::AddressSpace;
 use inkwell::types::BasicTypeEnum;
+use inkwell::attributes::Attribute;
+use inkwell::context::Context;
+
 pub mod compiler;
 
 
@@ -86,3 +90,79 @@ impl BasicTypeEnumCompare for BasicTypeEnum {
     }
 }
 
+#[derive(Debug, Singleton)]
+
+pub struct LLVMAttributeFactory {
+    attr_nounwind: Attribute,
+    attr_nocapture: Attribute,
+    attr_noalias: Attribute,
+    attr_readnone: Attribute,
+}
+
+unsafe impl Sync for LLVMAttributeFactory {}
+unsafe impl Send for LLVMAttributeFactory {}
+
+impl SingletonInit for LLVMAttributeFactory {
+    type Init = Context;
+    fn init(context: &Context) -> Self {
+        let attr_nounwind_id = Attribute::get_named_enum_kind_id("nounwind");
+        let attr_nocapture_id = Attribute::get_named_enum_kind_id("nocapture");
+        let attr_noalias_id = Attribute::get_named_enum_kind_id("noalias");
+        let attr_readnone_id = Attribute::get_named_enum_kind_id("readnone");
+
+        LLVMAttributeFactory {
+            attr_nounwind: context.create_enum_attribute(attr_nounwind_id, 0),
+            attr_nocapture: context.create_enum_attribute(attr_nocapture_id, 0),
+            attr_noalias: context.create_enum_attribute(attr_noalias_id, 0),
+            attr_readnone: context.create_enum_attribute(attr_readnone_id, 0)
+        }
+    }
+}
+
+impl LLVMAttributeFactory {
+    pub fn attr_nounwind(&self) -> &Attribute {
+        &self.attr_nounwind
+    }
+
+    pub fn attr_nocapture(&self) -> &Attribute {
+        &self.attr_nocapture
+    }
+
+    pub fn attr_noalias(&self) -> &Attribute {
+        &self.attr_noalias
+    }
+
+    pub fn attr_readnone(&self) -> &Attribute {
+        &self.attr_readnone
+    }
+}
+
+
+#[test]
+
+
+fn test_llvm_attribute_factory() {
+    let context = Context::create();
+
+    let attr_factory = LLVMAttributeFactory::get_instance(&context);
+    let nocapture = attr_factory.attr_nocapture();
+    let nounwind = attr_factory.attr_nounwind();
+    let noalias = attr_factory.attr_noalias();
+    let readnone = attr_factory.attr_readnone();
+
+    assert!(nocapture.is_enum());
+    assert_eq!(nocapture.get_enum_value(), 0);
+    assert_ne!(nocapture.get_enum_kind_id(), 0);
+
+    assert!(nounwind.is_enum());
+    assert_eq!(nounwind.get_enum_value(), 0);
+    assert_ne!(nounwind.get_enum_kind_id(), 0);
+
+    assert!(noalias.is_enum());
+    assert_eq!(noalias.get_enum_value(), 0);
+    assert_ne!(noalias.get_enum_kind_id(), 0);
+
+    assert!(readnone.is_enum());
+    assert_eq!(readnone.get_enum_value(), 0);
+    assert_ne!(readnone.get_enum_kind_id(), 0);
+}
