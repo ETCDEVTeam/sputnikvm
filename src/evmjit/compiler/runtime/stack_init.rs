@@ -9,6 +9,7 @@ use evmjit::compiler::evmtypes::EvmTypes;
 use evmjit::compiler::stack::EVM_MAX_STACK_SIZE;
 use inkwell::module::Linkage::*;
 use singletonum::Singleton;
+use evmjit::LLVMAttributeFactory;
 
 pub struct StackAllocator {
     stack_base : BasicValueEnum,
@@ -21,9 +22,10 @@ impl StackAllocator {
         let malloc_fn_type = types_instance.get_word_ptr_type().fn_type(&[types_instance.get_size_type().into()], false);
 
         let malloc_func = module.add_function ("malloc", malloc_fn_type, Some(External));
+        let attr_factory = LLVMAttributeFactory::get_instance(&context);
 
-        // TODO add Nounwind (i.e. function does not throw) and no alias attributes to function
-        // Attribute::get_named_enum_kind_id("noalias"), return a u32 id number
+        malloc_func.add_attribute(0, *attr_factory.attr_nounwind());
+        malloc_func.add_attribute(0, *attr_factory.attr_noalias());
         
         let malloc_size = (types_instance.get_word_type().get_bit_width() / 8) * EVM_MAX_STACK_SIZE;
         let malloc_size_ir_value = context.i64_type().const_int (malloc_size as u64, false);
