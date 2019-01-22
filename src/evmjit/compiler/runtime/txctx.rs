@@ -301,7 +301,7 @@ impl<'a> TransactionContextManager<'a> {
 mod tests {
     //use std::ffi::CString;
     use super::*;
-    
+    use inkwell::values::InstructionOpcode;    
     
     #[test]
     fn test_data_field_to_index() {
@@ -321,6 +321,31 @@ mod tests {
         let tx_ctx = tx_ctx_type_singleton.get_type();
 
         assert!(TransactionContextType::is_transaction_context_type (&tx_ctx));
+    }
+
+    #[test]
+    fn test_load_txctx_fn_instructions() {
+        use super::super::MainFuncCreator;
+        let context = Context::create();
+        let module = context.create_module("evm_module");
+        let builder = context.create_builder();
+
+        // Need to create main function before TransactionConextManager otherwise we will crash
+        MainFuncCreator::new ("main", &context, &builder, &module);
+        
+        TransactionContextManager::new(&context, &builder, &module);
+        let load_tx_ctx_fn_optional = module.get_function ("loadTxCtx");
+        assert!(load_tx_ctx_fn_optional != None);
+
+        let load_tx_ctx_fn = load_tx_ctx_fn_optional.unwrap();
+        let check_block_optional = load_tx_ctx_fn.get_first_basic_block();
+        assert!(check_block_optional != None);
+        let check_block = check_block_optional.unwrap();
+        assert_eq!(*check_block.get_name(), *CString::new("Check").unwrap());
+
+        assert!(check_block.get_first_instruction() != None);
+        let first_insn = check_block.get_first_instruction().unwrap();
+        assert_eq!(first_insn.get_opcode(), InstructionOpcode::Load);
     }
 
     #[test]
