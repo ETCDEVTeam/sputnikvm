@@ -338,14 +338,47 @@ mod tests {
         assert!(load_tx_ctx_fn_optional != None);
 
         let load_tx_ctx_fn = load_tx_ctx_fn_optional.unwrap();
+        assert_eq!(load_tx_ctx_fn.get_call_conventions(), LLVMFastCallConv as u32);
+
         let check_block_optional = load_tx_ctx_fn.get_first_basic_block();
         assert!(check_block_optional != None);
         let check_block = check_block_optional.unwrap();
         assert_eq!(*check_block.get_name(), *CString::new("Check").unwrap());
 
         assert!(check_block.get_first_instruction() != None);
-        let first_insn = check_block.get_first_instruction().unwrap();
-        assert_eq!(first_insn.get_opcode(), InstructionOpcode::Load);
+        let first_check_insn = check_block.get_first_instruction().unwrap();
+        assert_eq!(first_check_insn.get_opcode(), InstructionOpcode::Load);
+
+        assert!(first_check_insn.get_next_instruction() != None);
+        let second_check_insn = first_check_insn.get_next_instruction().unwrap();
+        assert_eq!(second_check_insn.get_opcode(), InstructionOpcode::Br);
+        assert!(second_check_insn.get_next_instruction() == None);
+
+        let load_block_optional = check_block.get_next_basic_block();
+        assert!(load_block_optional != None);
+        let load_block = load_block_optional.unwrap();
+        assert_eq!(*load_block.get_name(), *CString::new("Load").unwrap());
+        let first_load_bb_insn = load_block.get_first_instruction().unwrap();
+        assert_eq!(first_load_bb_insn.get_opcode(), InstructionOpcode::Store);
+
+        assert!(first_load_bb_insn.get_next_instruction() != None);
+        let second_load_bb_insn = first_load_bb_insn.get_next_instruction().unwrap();
+        assert_eq!(second_load_bb_insn.get_opcode(), InstructionOpcode::Call);
+
+        assert!(second_load_bb_insn.get_next_instruction() != None);
+        let third_load_bb_insn = second_load_bb_insn.get_next_instruction().unwrap();
+        assert_eq!(third_load_bb_insn.get_opcode(), InstructionOpcode::Br);
+        assert!(third_load_bb_insn.get_next_instruction() == None);
+
+        let exit_block_optional = load_block.get_next_basic_block();
+        assert!(exit_block_optional != None);
+        let exit_block = exit_block_optional.unwrap();
+        assert_eq!(*exit_block.get_name(), *CString::new("Exit").unwrap());
+        let first_exit_bb_insn = exit_block.get_first_instruction().unwrap();
+        assert_eq!(first_exit_bb_insn.get_opcode(), InstructionOpcode::Return);
+
+        assert!(first_exit_bb_insn.get_next_instruction() == None);
+
     }
 
     #[test]
