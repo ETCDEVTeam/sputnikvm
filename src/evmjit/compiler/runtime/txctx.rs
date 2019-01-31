@@ -330,7 +330,7 @@ mod tests {
         let module = context.create_module("evm_module");
         let builder = context.create_builder();
 
-        // Need to create main function before TransactionConextManager otherwise we will crash
+        // Need to create main function before TransactionContextManager otherwise we will crash
         MainFuncCreator::new ("main", &context, &builder, &module);
         
         TransactionContextManager::new(&context, &builder, &module);
@@ -339,6 +339,8 @@ mod tests {
 
         let load_tx_ctx_fn = load_tx_ctx_fn_optional.unwrap();
         assert_eq!(load_tx_ctx_fn.get_call_conventions(), LLVMFastCallConv as u32);
+        assert_eq!(load_tx_ctx_fn.count_params(), 3);
+        assert_eq!(load_tx_ctx_fn.count_basic_blocks(), 3);
 
         let check_block_optional = load_tx_ctx_fn.get_first_basic_block();
         assert!(check_block_optional != None);
@@ -432,6 +434,155 @@ mod tests {
         let the_struct_type2 = funct_param3_elem_t.as_struct_type();
         assert!(EnvDataType::is_env_data_type (&the_struct_type2));
 
+    }
+
+    #[test]
+    fn test_get_tx_ctx_item_gasprice() {
+        use super::super::MainFuncCreator;
+        let context = Context::create();
+        let module = context.create_module("my_module");
+        let builder = context.create_builder();
+
+        // Need to create main function before TransactionConextManager otherwise we will crash
+        MainFuncCreator::new ("main", &context, &builder, &module);
+        let manager = TransactionContextManager::new(&context, &builder, &module);
+
+        // Create dummy function
+
+        let fn_type = context.void_type().fn_type(&[], false);
+        let my_fn = module.add_function("my_fn", fn_type, Some(External));
+        let entry_bb = context.append_basic_block(&my_fn, "entry");
+
+        builder.position_at_end(&entry_bb);
+
+        // This call will generate some ir code for us to test
+        manager.gen_tx_ctx_item_ir(TransactionContextTypeFields::GasPrice);
+
+        let entry_block_optional = my_fn.get_first_basic_block();
+        assert!(entry_block_optional != None);
+        let entry_block = entry_block_optional.unwrap();
+        assert_eq!(*entry_block.get_name(), *CString::new("entry").unwrap());
+
+        assert!(entry_block.get_first_instruction() != None);
+        let first_insn = entry_block.get_first_instruction().unwrap();
+        assert_eq!(first_insn.get_opcode(), InstructionOpcode::Call);
+
+        assert!(first_insn.get_next_instruction() != None);
+        let second_insn = first_insn.get_next_instruction().unwrap();
+        assert_eq!(second_insn.get_opcode(), InstructionOpcode::GetElementPtr);
+
+        assert!(second_insn.get_next_instruction() != None);
+        let third_insn = second_insn.get_next_instruction().unwrap();
+        assert_eq!(third_insn.get_opcode(), InstructionOpcode::Load);
+
+        assert!(third_insn.get_next_instruction() == None);
+    }
+
+    #[test]
+    fn test_get_tx_ctx_item_origin() {
+        use super::super::MainFuncCreator;
+        let context = Context::create();
+        let module = context.create_module("my_module");
+        let builder = context.create_builder();
+
+        // Need to create main function before TransactionConextManager otherwise we will crash
+        MainFuncCreator::new ("main", &context, &builder, &module);
+        let manager = TransactionContextManager::new(&context, &builder, &module);
+
+        // Create dummy function
+
+        let fn_type = context.void_type().fn_type(&[], false);
+        let my_fn = module.add_function("my_fn", fn_type, Some(External));
+        let entry_bb = context.append_basic_block(&my_fn, "entry");
+
+        builder.position_at_end(&entry_bb);
+
+        // This call will generate some ir code for us to test
+        manager.gen_tx_ctx_item_ir(TransactionContextTypeFields::Origin);
+
+        let entry_block_optional = my_fn.get_first_basic_block();
+        assert!(entry_block_optional != None);
+        let entry_block = entry_block_optional.unwrap();
+        assert_eq!(*entry_block.get_name(), *CString::new("entry").unwrap());
+
+        assert!(entry_block.get_first_instruction() != None);
+        let first_insn = entry_block.get_first_instruction().unwrap();
+        assert_eq!(first_insn.get_opcode(), InstructionOpcode::Call);
+
+        assert!(first_insn.get_next_instruction() != None);
+        let second_insn = first_insn.get_next_instruction().unwrap();
+        assert_eq!(second_insn.get_opcode(), InstructionOpcode::GetElementPtr);
+
+        assert!(second_insn.get_next_instruction() != None);
+        let third_insn = second_insn.get_next_instruction().unwrap();
+        assert_eq!(third_insn.get_opcode(), InstructionOpcode::BitCast);
+
+        assert!(third_insn.get_next_instruction() != None);
+        let fourth_insn = third_insn.get_next_instruction().unwrap();
+        assert_eq!(fourth_insn.get_opcode(), InstructionOpcode::Load);
+
+        assert!(fourth_insn.get_next_instruction() == None);
+    }
+
+    #[test]
+    fn test_get_tx_ctx_item_coinbase() {
+        use super::super::MainFuncCreator;
+        let context = Context::create();
+        let module = context.create_module("my_module");
+        let builder = context.create_builder();
+
+        // Need to create main function before TransactionConextManager otherwise we will crash
+        MainFuncCreator::new ("main", &context, &builder, &module);
+        let manager = TransactionContextManager::new(&context, &builder, &module);
+
+        // Create dummy function
+
+        let fn_type = context.void_type().fn_type(&[], false);
+        let my_fn = module.add_function("my_fn", fn_type, Some(External));
+        let entry_bb = context.append_basic_block(&my_fn, "entry");
+
+        builder.position_at_end(&entry_bb);
+
+        // This call will generate some ir code for us to test
+        manager.gen_tx_ctx_item_ir(TransactionContextTypeFields::CoinBase);
+
+        let entry_block_optional = my_fn.get_first_basic_block();
+        assert!(entry_block_optional != None);
+        let entry_block = entry_block_optional.unwrap();
+        assert_eq!(*entry_block.get_name(), *CString::new("entry").unwrap());
+
+        assert!(entry_block.get_first_instruction() != None);
+        let first_insn = entry_block.get_first_instruction().unwrap();
+        assert_eq!(first_insn.get_opcode(), InstructionOpcode::Call);
+
+        assert!(first_insn.get_next_instruction() != None);
+        let second_insn = first_insn.get_next_instruction().unwrap();
+        assert_eq!(second_insn.get_opcode(), InstructionOpcode::GetElementPtr);
+
+        assert!(second_insn.get_next_instruction() != None);
+        let third_insn = second_insn.get_next_instruction().unwrap();
+        assert_eq!(third_insn.get_opcode(), InstructionOpcode::BitCast);
+
+        assert!(third_insn.get_next_instruction() != None);
+        let fourth_insn = third_insn.get_next_instruction().unwrap();
+        assert_eq!(fourth_insn.get_opcode(), InstructionOpcode::Load);
+
+        assert!(fourth_insn.get_next_instruction() == None);
+    }
+
+    #[test]
+    fn test_get_tx_ctx_type() {
+        use super::super::MainFuncCreator;
+        let context = Context::create();
+        let module = context.create_module("my_module");
+        let builder = context.create_builder();
+
+        // Need to create main function before TransactionConextManager otherwise we will crash
+        MainFuncCreator::new ("main", &context, &builder, &module);
+        let manager = TransactionContextManager::new(&context, &builder, &module);
+
+        let tx_type = manager.get_tx_ctx_type().get_type();
+        assert!(TransactionContextType::is_transaction_context_type (&tx_type));
     }
     
 }

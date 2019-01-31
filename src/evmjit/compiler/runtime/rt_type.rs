@@ -250,4 +250,10 @@ fn test_runtime_type() {
     let rt_struct = rt_type_singleton.get_type();
 
     assert!(RuntimeType::is_runtime_type(&rt_struct));
+
+    // Test that we have a pointer to RuntimeData
+
+    let rt_struct_ptr = rt_type_singleton.get_ptr_type();
+    assert!(rt_struct_ptr.get_element_type().is_struct_type());
+    assert!(RuntimeType::is_runtime_type (rt_struct_ptr.get_element_type().as_struct_type()));
 }
