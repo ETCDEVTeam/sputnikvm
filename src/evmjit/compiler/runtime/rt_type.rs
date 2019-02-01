@@ -242,18 +242,152 @@ impl RuntimeTypeManager {
 
 }
 
-#[test]
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use inkwell::values::InstructionOpcode;
 
-fn test_runtime_type() {
-    let context = Context::create();
-    let rt_type_singleton = RuntimeType::get_instance(&context);
-    let rt_struct = rt_type_singleton.get_type();
+    #[test]
+    fn test_runtime_type() {
+        let context = Context::create();
+        let rt_type_singleton = RuntimeType::get_instance(&context);
+        let rt_struct = rt_type_singleton.get_type();
 
-    assert!(RuntimeType::is_runtime_type(&rt_struct));
+        assert!(RuntimeType::is_runtime_type(&rt_struct));
 
-    // Test that we have a pointer to RuntimeData
+        // Test that we have a pointer to RuntimeData
 
-    let rt_struct_ptr = rt_type_singleton.get_ptr_type();
-    assert!(rt_struct_ptr.get_element_type().is_struct_type());
-    assert!(RuntimeType::is_runtime_type (rt_struct_ptr.get_element_type().as_struct_type()));
+        let rt_struct_ptr = rt_type_singleton.get_ptr_type();
+        assert!(rt_struct_ptr.get_element_type().is_struct_type());
+        assert!(RuntimeType::is_runtime_type (rt_struct_ptr.get_element_type().as_struct_type()));
+    }
+
+    #[test]
+    fn test_get_env_ptr() {
+        use super::super::MainFuncCreator;
+        let context = Context::create();
+        let module = context.create_module("my_module");
+        let builder = context.create_builder();
+
+        // Need to create main function before RuntimeTypeManager otherwise we will crash
+        MainFuncCreator::new ("main", &context, &builder, &module);
+
+        let manager = RuntimeTypeManager::new (&context, &builder);
+        let env_ptr = manager.get_env_ptr();
+
+        assert_eq!(env_ptr.get_type().into_pointer_type(), EnvDataType::get_instance(&context).get_ptr_type());
+    }
+
+    #[test]
+    fn test_get_data_ptr() {
+        use super::super::MainFuncCreator;
+        let context = Context::create();
+        let module = context.create_module("my_module");
+        let builder = context.create_builder();
+
+        // Need to create main function before RuntimeTypeManager otherwise we will crash
+        MainFuncCreator::new ("main", &context, &builder, &module);
+
+        let manager = RuntimeTypeManager::new (&context, &builder);
+        let data_ptr = manager.get_data_ptr();
+
+        assert_eq!(data_ptr.get_type().into_pointer_type(), RuntimeDataType::get_instance(&context).get_ptr_type());
+    }
+
+    #[test]
+    fn test_get_mem_ptr() {
+        use super::super::MainFuncCreator;
+        let context = Context::create();
+        let module = context.create_module("my_module");
+        let builder = context.create_builder();
+
+        // Need to create main function before RuntimeTypeManager otherwise we will crash
+        MainFuncCreator::new ("main", &context, &builder, &module);
+
+        let manager = RuntimeTypeManager::new (&context, &builder);
+        let mem_ptr = manager.get_mem_ptr();
+
+        assert_eq!(mem_ptr.get_type(), MemoryRepresentationType::get_instance(&context).get_ptr_type());
+    }
+
+    #[test]
+    fn test_get_runtime_manager_new() {
+        use super::super::MainFuncCreator;
+        let context = Context::create();
+        let module = context.create_module("my_module");
+        let builder = context.create_builder();
+
+        // Need to create main function before TransactionConextManager otherwise we will crash
+        let main_func = MainFuncCreator::new ("main", &context, &builder, &module);
+        RuntimeTypeManager::new (&context, &builder);
+
+        let entry_block = main_func.get_entry_bb();
+
+        assert!(entry_block.get_first_instruction() != None);
+        let first_insn = entry_block.get_first_instruction().unwrap();
+        assert_eq!(first_insn.get_opcode(), InstructionOpcode::GetElementPtr);
+
+        assert!(first_insn.get_next_instruction() != None);
+        let second_insn = first_insn.get_next_instruction().unwrap();
+        assert_eq!(second_insn.get_opcode(), InstructionOpcode::Load);
+
+        assert!(second_insn.get_next_instruction() != None);
+        let third_insn = second_insn.get_next_instruction().unwrap();
+        assert_eq!(third_insn.get_opcode(), InstructionOpcode::GetElementPtr);
+
+        assert!(third_insn.get_next_instruction() != None);
+        let fourth_insn = third_insn.get_next_instruction().unwrap();
+        assert_eq!(fourth_insn.get_opcode(), InstructionOpcode::GetElementPtr);
+
+        assert!(fourth_insn.get_next_instruction() != None);
+        let fifth_insn = fourth_insn.get_next_instruction().unwrap();
+        assert_eq!(fifth_insn.get_opcode(), InstructionOpcode::Load);
+
+        assert!(fifth_insn.get_next_instruction() != None);
+        let sixth_insn = fifth_insn.get_next_instruction().unwrap();
+        assert_eq!(sixth_insn.get_opcode(), InstructionOpcode::Load);
+
+        assert!(sixth_insn.get_next_instruction() != None);
+        let seventh_insn = sixth_insn.get_next_instruction().unwrap();
+        assert_eq!(seventh_insn.get_opcode(), InstructionOpcode::ExtractValue);
+
+        assert!(seventh_insn.get_next_instruction() != None);
+        let eighth_insn = seventh_insn.get_next_instruction().unwrap();
+        assert_eq!(eighth_insn.get_opcode(), InstructionOpcode::ExtractValue);
+
+        assert!(eighth_insn.get_next_instruction() != None);
+        let ninth_insn = eighth_insn.get_next_instruction().unwrap();
+        assert_eq!(ninth_insn.get_opcode(), InstructionOpcode::ExtractValue);
+
+        assert!(ninth_insn.get_next_instruction() != None);
+        let tenth_insn = ninth_insn.get_next_instruction().unwrap();
+        assert_eq!(tenth_insn.get_opcode(), InstructionOpcode::ExtractValue);
+
+        assert!(tenth_insn.get_next_instruction() != None);
+        let eleventh_insn = tenth_insn.get_next_instruction().unwrap();
+        assert_eq!(eleventh_insn.get_opcode(), InstructionOpcode::ExtractValue);
+
+        assert!(eleventh_insn.get_next_instruction() != None);
+        let twelfth_insn = eleventh_insn.get_next_instruction().unwrap();
+        assert_eq!(twelfth_insn.get_opcode(), InstructionOpcode::ExtractValue);
+
+        assert!(twelfth_insn.get_next_instruction() != None);
+        let thirteenth_insn = twelfth_insn.get_next_instruction().unwrap();
+        assert_eq!(thirteenth_insn.get_opcode(), InstructionOpcode::ExtractValue);
+
+        assert!(thirteenth_insn.get_next_instruction() != None);
+        let fourteenth_insn = thirteenth_insn.get_next_instruction().unwrap();
+        assert_eq!(fourteenth_insn.get_opcode(), InstructionOpcode::ExtractValue);
+
+        assert!(fourteenth_insn.get_next_instruction() != None);
+        let fifteenth_insn = fourteenth_insn.get_next_instruction().unwrap();
+        assert_eq!(fifteenth_insn.get_opcode(), InstructionOpcode::ExtractValue);
+
+        assert!(fifteenth_insn.get_next_instruction() != None);
+        let sixteenth_insn = fifteenth_insn.get_next_instruction().unwrap();
+        assert_eq!(sixteenth_insn.get_opcode(), InstructionOpcode::ExtractValue);
+
+        assert!(sixteenth_insn.get_next_instruction() == None);
+
+    }
 }

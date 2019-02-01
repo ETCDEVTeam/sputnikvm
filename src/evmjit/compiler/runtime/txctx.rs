@@ -301,7 +301,7 @@ impl<'a> TransactionContextManager<'a> {
 mod tests {
     //use std::ffi::CString;
     use super::*;
-    use inkwell::values::InstructionOpcode;    
+    use inkwell::values::InstructionOpcode;
     
     #[test]
     fn test_data_field_to_index() {
