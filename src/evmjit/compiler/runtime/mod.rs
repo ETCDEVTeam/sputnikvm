@@ -173,7 +173,7 @@ impl<'a> RuntimeManager<'a> {
 #[test]
 
 
-fn test_runtime_data_manager() {
+fn test_runtime_manager() {
     let context = Context::create();
     let module = context.create_module("my_module");
     let builder = context.create_builder();
@@ -181,19 +181,12 @@ fn test_runtime_data_manager() {
     let manager = RuntimeManager::new("main", &context, &builder, &module);
 
 
-    let rt_data_type_singleton = RuntimeDataType::get_instance(&context);
-    let rt_data_struct = rt_data_type_singleton.get_type();
+    assert!(RuntimeDataType::is_rt_data_type(&manager.get_runtime_data_type()));
+    assert!(RuntimeType::is_runtime_type(&manager.get_runtime_type()));
 
-    assert_eq!(manager.get_runtime_data_type().count_fields(), rt_data_struct.count_fields());
-    assert_eq!(manager.get_runtime_data_type().get_name(), rt_data_struct.get_name());
-    assert_eq!(manager.get_runtime_data_type().get_field_types(), rt_data_struct.get_field_types());
-    
-    let rt_type_singleton = RuntimeType::get_instance(&context);
-    let rt_struct = rt_type_singleton.get_type();
-
-    assert_eq!(manager.get_runtime_type().count_fields(), rt_struct.count_fields());
-    assert_eq!(manager.get_runtime_type().get_name(), rt_struct.get_name());
-    assert_eq!(manager.get_runtime_type().get_field_types(), rt_struct.get_field_types());
+    let rt_ptr = manager.get_runtime_ptr_type();
+    assert!(rt_ptr.get_element_type().is_struct_type());
+    assert!(RuntimeType::is_runtime_type(rt_ptr.get_element_type().as_struct_type()));
 }
 
 
