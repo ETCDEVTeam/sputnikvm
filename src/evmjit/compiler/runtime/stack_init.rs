@@ -52,3 +52,66 @@ impl StackAllocator {
     }
 }
 
+
+#[cfg(test)]
+mod tests {
+    use std::ffi::CString;
+    use super::*;
+    use inkwell::values::InstructionOpcode;
+    use inkwell::attributes::Attribute;
+
+
+    #[test]
+    fn test_stack_allocator_new() {
+        //use super::super::MainFuncCreator;
+        let context = Context::create();
+        let module = context.create_module("my_module");
+        let builder = context.create_builder();
+
+
+        // Create dummy function
+
+        let fn_type = context.void_type().fn_type(&[], false);
+        let my_fn = module.add_function("my_fn", fn_type, Some(External));
+        let entry_bb = context.append_basic_block(&my_fn, "entry");
+
+        let attr_factory = LLVMAttributeFactory::get_instance(&context);
+
+        builder.position_at_end(&entry_bb);
+        StackAllocator::new(&context, &builder, &module);
+
+        let malloc_func_optional = module.get_function("malloc");
+        assert!(malloc_func_optional != None);
+
+        let malloc_func = malloc_func_optional.unwrap();
+        assert!(malloc_func.get_linkage() == External);
+
+        let nounwind_attr = malloc_func.get_enum_attribute(0, Attribute::get_named_enum_kind_id("nounwind"));
+        assert!(nounwind_attr != None);
+
+        let noalias_attr = malloc_func.get_enum_attribute(0, Attribute::get_named_enum_kind_id("noalias"));
+        assert!(noalias_attr != None);
+
+        assert_eq!(nounwind_attr.unwrap(), *attr_factory.attr_nounwind());
+        assert_eq!(noalias_attr.unwrap(), *attr_factory.attr_noalias());
+
+        let entry_block_optional = my_fn.get_first_basic_block();
+        assert!(entry_block_optional != None);
+        let entry_block = entry_block_optional.unwrap();
+        assert_eq!(*entry_block.get_name(), *CString::new("entry").unwrap());
+
+        assert!(entry_block.get_first_instruction() != None);
+        let first_insn = entry_block.get_first_instruction().unwrap();
+        assert_eq!(first_insn.get_opcode(), InstructionOpcode::Call);
+
+        assert!(first_insn.get_next_instruction() != None);
+        let second_insn = first_insn.get_next_instruction().unwrap();
+        assert_eq!(second_insn.get_opcode(), InstructionOpcode::Alloca);
+
+        assert!(second_insn.get_next_instruction() != None);
+        let third_insn = second_insn.get_next_instruction().unwrap();
+        assert_eq!(third_insn.get_opcode(), InstructionOpcode::Store);
+
+        assert!(third_insn.get_next_instruction() == None);
+    }
+}
