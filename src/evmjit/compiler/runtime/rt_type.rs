@@ -131,6 +131,7 @@ impl RuntimeType {
     }
 }
 
+#[derive(Debug, Copy, Clone)]
 pub struct RuntimeTypeManager {
     m_data_ptr: BasicValueEnum,
     m_mem_ptr: PointerValue,
@@ -240,6 +241,9 @@ impl RuntimeTypeManager {
         self.m_rt_data_elts[Depth.to_index()]
     }
 
+    pub fn get_gas(self) -> BasicValueEnum {
+        self.m_rt_data_elts[Gas.to_index()]
+    }
 }
 
 #[cfg(test)]
