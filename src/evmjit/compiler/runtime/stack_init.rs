@@ -11,6 +11,7 @@ use inkwell::module::Linkage::*;
 use singletonum::Singleton;
 use evmjit::LLVMAttributeFactory;
 
+#[derive(Debug, Copy, Clone)]
 pub struct StackAllocator {
     stack_base : BasicValueEnum,
     stack_size_ptr : PointerValue,
