@@ -6,20 +6,34 @@ use inkwell::context::Context;
 
 pub mod compiler;
 
-
+/// Wrapper trait for LLVM type comparisons.
 pub trait BasicTypeEnumCompare {
+    /// Returns whether the type is an integer of any width.
     fn is_int_t(self) -> bool;
+    /// Returns whether the type is an integer of 1-bit width.
     fn is_int1(self) -> bool;
+    /// Returns whether the type is an integer of 8-bit width.
     fn is_int8(self) -> bool;
+    /// Returns whether the type is an integer of 32-bit width.
     fn is_int32(self) -> bool;
+    /// Returns whether the type is an integer of 64-bit width.
     fn is_int64(self) -> bool;
+    /// Returns whether the type is an integer of 128-bit width.
     fn is_int128(self) -> bool;
+    /// Returns whether the type is an integer of 256-bit width.
     fn is_int256(self) -> bool;
+    /// Returns whether the type is a pointer.
     fn is_ptr_type(self) -> bool;
+    /// Returns whether the type is a pointer referring to an 8-bit integer.
     fn is_ptr_to_int8(self) -> bool;
+    /// Returns whether the type is a pointer referring to any data structure.
     fn is_ptr_to_struct(self) -> bool;
+    /// Returns whether the type is a pointer referring to an array type.
     fn is_array_t(self) -> bool;
+    /// Returns whether the type is a pointer referring to an array type of specified length.
     fn is_array_of_len_n(self, len:u32) -> bool;
+    /// Returns whether the type is a pointer referring to an array of 8-bit integers with
+    /// specified length.
     fn is_int8_array(self, len:u32) -> bool;
 }
 
@@ -91,11 +105,18 @@ impl BasicTypeEnumCompare for BasicTypeEnum {
 }
 
 #[derive(Debug, Singleton)]
-
+/// Factory structure for LLVM attributes.
 pub struct LLVMAttributeFactory {
+    /// Attribute ensuring that no exceptions are raised in a function.
     attr_nounwind: Attribute,
+    /// Attribute ensuring that a function does not copy pointers which outlive the call.
     attr_nocapture: Attribute,
+    /// Attribute ensuring no pointer aliasing will occur for objects referred to by an argument or
+    /// return value during a function's execution.
     attr_noalias: Attribute,
+    /// Attribute ensuring that a function will not access any caller-visible state. If applied to
+    /// pointer arguments, ensures that the pointer will not be dereferenced unless accessed by an
+    /// alias.
     attr_readnone: Attribute,
 }
 
@@ -120,18 +141,22 @@ impl SingletonInit for LLVMAttributeFactory {
 }
 
 impl LLVMAttributeFactory {
+    /// Returns a `nounwind` attribute reference.
     pub fn attr_nounwind(&self) -> &Attribute {
         &self.attr_nounwind
     }
 
+    /// Returns a `nocapture` attribute reference.
     pub fn attr_nocapture(&self) -> &Attribute {
         &self.attr_nocapture
     }
 
+    /// Returns a `noalias` attribute reference.
     pub fn attr_noalias(&self) -> &Attribute {
         &self.attr_noalias
     }
 
+    /// Returns a `readnone` attribute reference.
     pub fn attr_readnone(&self) -> &Attribute {
         &self.attr_readnone
     }
