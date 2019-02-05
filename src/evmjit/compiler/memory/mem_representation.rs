@@ -12,11 +12,11 @@ use inkwell::AddressSpace;
 use evmjit::BasicTypeEnumCompare;
 
 #[derive(Debug, Singleton)]
-
-// Internal representation of EVM linear memory
-
+/// Internal representation of EVM linear memory
 pub struct MemoryRepresentationType {
+    /// Type representing an EVM's memory segment
     memory_type: StructType,
+    /// Type representing a pointer to an EVM memory
     memory_ptr_type: PointerType,
 }
 
@@ -43,15 +43,18 @@ impl SingletonInit for MemoryRepresentationType {
     }
 }
 
-impl MemoryRepresentationType {    
+impl MemoryRepresentationType {
+    /// Returns the LLVM type of an EVM memory segment.
     pub fn get_type(&self) -> StructType {
         self.memory_type
     }
 
+    /// Returns the LLVM type of an EVM memory segment pointer.
     pub fn get_ptr_type(&self) -> PointerType {
         self.memory_ptr_type
     }
-
+    
+    /// Validates the properties of an EVM linear memory type.
     pub fn is_mem_representation_type(a_struct: &StructType) -> bool {
         if !a_struct.is_sized() {
             return false;
@@ -93,7 +96,7 @@ impl MemoryRepresentationType {
     }
 }
 
-
+/// An instance of an EVM linear memory.
 pub struct MemoryRepresentation<'a> {
     m_context: &'a Context,
     m_builder: &'a Builder,
@@ -102,7 +105,7 @@ pub struct MemoryRepresentation<'a> {
 }
 
 impl<'a> MemoryRepresentation<'a> {
-
+    /// Constructs an EVM memory instance from a pre-allocated buffer.
     pub fn new_with_mem(allocated_memory: PointerValue, context: &'a Context,
                         builder: &'a Builder, module: &'a Module) -> MemoryRepresentation<'a> {
         let mem_type = MemoryRepresentationType::get_instance(context).get_type();
@@ -117,6 +120,7 @@ impl<'a> MemoryRepresentation<'a> {
 
     }
 
+    /// Constructs a named linear memory, handling allocation of memory space.
     pub fn new_with_name(name: &str, context: &'a Context,
                          builder: &'a Builder, module: &'a Module) -> MemoryRepresentation<'a> {
         let mem_type = MemoryRepresentationType::get_instance(context).get_type();
@@ -130,14 +134,14 @@ impl<'a> MemoryRepresentation<'a> {
             m_memory: alloca_result
         }
     }
-
+    
+    /// Returns the internal memory type representation.
     pub fn get_memory_representation_type(&self) -> StructType {
         MemoryRepresentationType::get_instance(self.m_context).get_type()
     }
 }
 
 #[test]
-
 fn test_memory_representation_type() {
     let context = Context::create();
     let mem_type_singleton = MemoryRepresentationType::get_instance(&context);
