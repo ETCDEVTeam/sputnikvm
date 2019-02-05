@@ -12,12 +12,16 @@ use singletonum::Singleton;
 use evmjit::LLVMAttributeFactory;
 
 #[derive(Debug, Copy, Clone)]
+/// Allocator handling the EVM call stack.
 pub struct StackAllocator {
+    /// The stack base.
     stack_base : BasicValueEnum,
+    /// A pointer to the stack size.
     stack_size_ptr : PointerValue,
 }
 
 impl StackAllocator {
+    /// Initializes a new runtime stack manager.
     pub fn new(context: & Context, builder: &Builder, module: &Module) -> StackAllocator {
         let types_instance = EvmTypes::get_instance(context);
         let malloc_fn_type = types_instance.get_word_ptr_type().fn_type(&[types_instance.get_size_type().into()], false);
@@ -43,11 +47,13 @@ impl StackAllocator {
             stack_size_ptr: size_ptr
         }
     }
-
+    
+    /// Returns the LLVM representation of the stack base.
     pub fn get_stack_base_as_ir_value(&self) -> BasicValueEnum {
         self.stack_base
     }
-
+    
+    /// Returns the LLVM representation of the stack size.
     pub fn get_stack_size_as_ir_value(&self) -> PointerValue {
         self.stack_size_ptr
     }
