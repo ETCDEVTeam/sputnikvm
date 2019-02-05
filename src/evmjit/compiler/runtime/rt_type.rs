@@ -31,10 +31,11 @@ use super::rt_data_type::RuntimeDataTypeFields::Depth;
 
 // RuntimeType is the struct that the JIT will build to pass
 // arguments from the VM to the contract at runtime
-
 pub struct RuntimeType
 {
+    /// LLVM type representing the runtime.
     rt_type: StructType,
+    /// LLVM type representing a runtime pointer.
     rt_ptr_type: PointerType,
 }
 
@@ -60,14 +61,17 @@ impl SingletonInit for RuntimeType {
 }
 
 impl RuntimeType {
+    /// Returns the LLVM type for a runtime.
     pub fn get_type(&self) -> StructType {
         self.rt_type
     }
-
+    
+    /// Returns the LLVM type for a runtime pointer.
     pub fn get_ptr_type(&self) -> PointerType {
         self.rt_ptr_type
     }
 
+    /// Validates properties of the runtime type.
     pub fn is_runtime_type(a_struct: &StructType) -> bool {
         if !a_struct.is_sized() {
             return false;
@@ -132,10 +136,15 @@ impl RuntimeType {
 }
 
 #[derive(Debug, Copy, Clone)]
+/// Manager struct for the runtime.
 pub struct RuntimeTypeManager {
+    /// The runtime pointer.
     m_data_ptr: BasicValueEnum,
+    /// The runtime's associated memory segment.
     m_mem_ptr: PointerValue,
+    /// The runtime's associated environment.
     m_env_ptr: BasicValueEnum,
+    /// The runtime data fields.
     m_rt_data_elts: [BasicValueEnum; 10],
 }
 
@@ -194,6 +203,7 @@ impl RuntimeTypeManager {
         }
     }
 
+    /// Returns the runtime pointer given its builder.
     fn get_runtime_ptr_with_builder(context: & Context, builder: & Builder) -> BasicValueEnum {
         // The parent of the first basic block is a function
         
@@ -213,34 +223,42 @@ impl RuntimeTypeManager {
         runtime_ptr
     }
 
+    /// Returns the environment instance.
     pub fn get_env_ptr(self) -> BasicValueEnum {
         self.m_env_ptr
     }
 
+    /// Returns the data pointer.
     pub fn get_data_ptr(self) -> BasicValueEnum {
         self.m_data_ptr
     }
 
+    /// Returns a pointer to the memory instance.
     pub fn get_mem_ptr(self) -> PointerValue {
         self.m_mem_ptr
     }
 
+    /// Returns the destination address field in the runtime data.
     pub fn get_address(self) -> BasicValueEnum {
         self.m_rt_data_elts[Address.to_index()]
     }
-
+    
+    /// Returns the sender address field in the runtime data.
     pub fn get_sender(self) -> BasicValueEnum {
         self.m_rt_data_elts[Sender.to_index()]
     }
 
+    /// Returns the value field in the runtime data.
     pub fn get_value(self) -> BasicValueEnum {
         self.m_rt_data_elts[Value.to_index()]
     }
 
+    /// Returns the call depth field in the runtime data.
     pub fn get_depth(self) -> BasicValueEnum {
         self.m_rt_data_elts[Depth.to_index()]
     }
 
+    /// Returns the call depth field in the runtime data.
     pub fn get_gas(self) -> BasicValueEnum {
         self.m_rt_data_elts[Gas.to_index()]
     }
