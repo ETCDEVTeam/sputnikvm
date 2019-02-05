@@ -11,12 +11,12 @@ use inkwell::values::BasicValueEnum;
 use inkwell::values::FunctionValue;
 use inkwell::module::Linkage::*;
 use inkwell::AddressSpace;
-use evmjit::compiler::runtime::env::EnvDataType;
-use evmjit::compiler::evmtypes::EvmTypes;
+use evmjit::compiler::runtime::env::EnvDataType; use evmjit::compiler::evmtypes::EvmTypes;
 use llvm_sys::LLVMCallConv::*;
 use std::ffi::CString;
 
 #[derive(PartialEq)]
+/// Enum representing the fields of the transaction context structure.
 pub enum TransactionContextTypeFields {
     GasPrice,
     Origin,
@@ -27,6 +27,7 @@ pub enum TransactionContextTypeFields {
     Difficulty
 }
 
+/// Trait mapping the transaction context enum to an index.
 trait TransactionContextTypeFieldToIndex {
     fn to_index(&self) -> usize;
 }
@@ -46,9 +47,11 @@ impl TransactionContextTypeFieldToIndex for TransactionContextTypeFields {
 }
 
 #[derive(Debug, Singleton)]
-
+/// Transaction context structure.
 pub struct TransactionContextType {
+    /// The LLVM representation of a TX context struct.
     txctx_type: StructType,
+    /// The LLVM representation of a TX context struct pointer.
     txctx_ptr_type: PointerType,
 }
 
@@ -82,18 +85,22 @@ impl SingletonInit for TransactionContextType {
 }
 
 impl TransactionContextType {
+    /// Returns the LLVM type of the transaction context.
     pub fn get_type(&self) -> StructType {
         self.txctx_type
     }
 
+    /// Returns the LLVM type of a transaction context pointer.
     pub fn get_ptr_type(&self) -> PointerType {
         self.txctx_ptr_type
     }
     
+    /// Returns the number of fields in the context structure.
     pub fn get_num_fields(&self) -> u32 {
         self.get_type().count_fields()
     }
 
+    /// Validates basic properties of the transaction context type.
     pub fn is_transaction_context_type(a_struct: &StructType) -> bool {
         if !a_struct.is_sized() {
             return false;
@@ -201,17 +208,23 @@ impl TransactionContextType {
     }
 }
 
-
+/// Manager structure for the transaction context.
 pub struct TransactionContextManager<'a> {
+    /// A pointer to an instance of the loaded context.
     m_tx_ctx_loaded : PointerValue,
+    /// A pointer to an instance of the context.
     m_tx_ctx : PointerValue,
+    /// A loader function for the transaction context.
     m_load_tx_ctx_fn : FunctionValue,
+    /// The LLVM builder.
     m_builder: &'a Builder,
+    /// The LLVM context.
     m_context: &'a Context,
 }
 
 
 impl<'a> TransactionContextManager<'a> {
+    /// Initializes a new transaction context manager.
     pub fn new(context: &'a Context, builder: &'a Builder, module: &Module) -> TransactionContextManager<'a> {
         let bool_t = context.bool_type();
         let tx_loaded = builder.build_alloca(bool_t, "txctx.loaded");
@@ -269,11 +282,13 @@ impl<'a> TransactionContextManager<'a> {
             m_context : context
         }
     }
-
+    
+    /// Returns the internal context type.
     pub fn get_tx_ctx_type(&self) -> & TransactionContextType {
         TransactionContextType::get_instance(self.m_context)
     }
     
+    /// Returns an item in the context as an LLVM IR value.
     pub fn gen_tx_ctx_item_ir(&self, field : TransactionContextTypeFields) -> BasicValueEnum {
         let call = self.m_builder.build_call (self.m_load_tx_ctx_fn, &[self.m_tx_ctx_loaded.into(),
                                                              self.m_tx_ctx.into()], "");
