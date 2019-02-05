@@ -9,7 +9,7 @@ use inkwell::AddressSpace;
 use evmjit::BasicTypeEnumCompare;
 
 pub const NUM_RUNTIME_DATA_FIELDS: usize = 10;
-
+/// Enum representing the runtime data fields.
 pub enum RuntimeDataTypeFields {
     Gas,
     GasPrice,
@@ -25,6 +25,7 @@ pub enum RuntimeDataTypeFields {
     ReturnDataSize   // Return data size, used only on RETURN
 }
 
+/// Trait mapping a runtime data field enum to an index.
 pub trait RuntimeDataFieldToIndex {
     fn to_index(&self) -> usize;
 }
@@ -42,13 +43,14 @@ impl RuntimeDataFieldToIndex for RuntimeDataTypeFields {
             RuntimeDataTypeFields::Address => 7,
             RuntimeDataTypeFields::Sender => 8,
             RuntimeDataTypeFields::Depth => 9,
-            RuntimeDataTypeFields::ReturnData => 2, // We are deliberately ovelap with CallData
-            RuntimeDataTypeFields::ReturnDataSize => 3, // We are deliberately ovelap with CallDataSize
+            RuntimeDataTypeFields::ReturnData => 2, // We deliberately overlap with CallData
+            RuntimeDataTypeFields::ReturnDataSize => 3, // We deliberately overlap with CallDataSize
         }
     }
 
 }
 
+/// Trait mapping a runtime data field enum to a name.
 pub trait RuntimeDataFieldToName {
     fn to_name(&mut self) -> &'static str;
 }
@@ -74,13 +76,13 @@ impl RuntimeDataFieldToName for RuntimeDataTypeFields {
 }
 
 #[derive(Debug, Singleton)]
-
-// RuntimeDataType is the struct that the JIT will build to pass
-// arguments from the VM to the contract at runtime
-
+/// RuntimeDataType is the struct that the JIT will build to pass
+/// arguments from the VM to the contract at runtime.
 pub struct RuntimeDataType
 {
+    /// The LLVM type representing runtime data.
     rt_type: StructType,
+    /// The LLVM type representing a runtime data pointer.
     rt_ptr_type: PointerType,
 }
 
@@ -114,15 +116,18 @@ impl SingletonInit for RuntimeDataType {
     }
 }
 
-impl RuntimeDataType {    
+impl RuntimeDataType {
+    /// Returns the LLVM type of runtime data.
     pub fn get_type(&self) -> StructType {
         self.rt_type
     }
-
+    
+    /// Returns the LLVM type of a runtime data pointer.
     pub fn get_ptr_type(&self) -> PointerType {
         self.rt_ptr_type
     }
 
+    /// Validates the properties of a runtime data type.
     pub fn is_rt_data_type(a_struct: &StructType) -> bool {
         if !a_struct.is_sized() {
             return false;

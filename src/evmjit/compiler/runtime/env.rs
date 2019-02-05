@@ -8,10 +8,12 @@ use inkwell::AddressSpace;
 use std::ffi::CString;
 
 #[derive(Debug, Singleton)]
-
+/// Internal representation of an EVM environment.
 pub struct EnvDataType
 {
+    /// An EVM environment type.
     env_type: StructType,
+    /// An EVM environment pointer type.
     env_ptr_type: PointerType,
 }
 
@@ -31,14 +33,17 @@ impl SingletonInit for EnvDataType {
 }
 
 impl EnvDataType {
+    /// Returns the LLVM type for an EVM environment.
     pub fn get_type(&self) -> StructType {
         self.env_type
     }
-
+    
+    /// Returns the LLVM type for an EVM environment pointer.
     pub fn get_ptr_type(&self) -> PointerType {
         self.env_ptr_type
     }
-
+    
+    /// Validates the basic properties of an EVM environment.
     pub fn is_env_data_type(a_struct: &StructType) -> bool {
         if a_struct.count_fields() != 0 {
             return false;

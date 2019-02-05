@@ -25,17 +25,23 @@ use self::stack_init::StackAllocator;
 use evmjit::compiler::evmtypes::EvmTypes;
 use evmjit::compiler::evmconstants::EvmConstants;
 
+/// Builder structure instantiating a main function.
 pub struct MainFuncCreator {
+    /// A main function instance.
     m_main_func: FunctionValue,
+    /// A jump table instance.
     m_jumptable_bb: BasicBlock,
+    /// The entry block.
     m_entry_bb: BasicBlock,
+    /// The block called on end of execution.
     m_stop_bb: BasicBlock,
+    /// The block called on abort.
     m_abort_bb: BasicBlock,
 }
 
 impl MainFuncCreator {
+    /// Constructs a named main function builder.
     pub fn new(name : &str, context: &Context, builder: &Builder, module: &Module) -> MainFuncCreator {
-
         let types_instance = EvmTypes::get_instance(context);
         let main_ret_type = types_instance.get_contract_return_type();
 
@@ -63,29 +69,35 @@ impl MainFuncCreator {
             m_abort_bb: abort_bb,
         }
     }
-
+    
+    /// Returns the main function instance.
     pub fn get_main_func(&self) -> FunctionValue {
         self.m_main_func
     }
 
+    /// Returns the jump table instance.
     pub fn get_jumptable_bb(&self) -> &BasicBlock {
         &self.m_jumptable_bb
     }
-
+    
+    /// Returns the entry point.
     pub fn get_entry_bb(&self) -> &BasicBlock {
         &self.m_entry_bb
     }
-
+    
+    /// Returns the abort code block.
     pub fn get_abort_bb(&self) -> &BasicBlock {
         &self.m_abort_bb
     }
 }
 
+/// Manager structure for gas counters.
 struct GasPtrManager {
     m_gas_ptr: PointerValue
 }
 
 impl GasPtrManager {
+    /// Initializes a gas counter manager given an initial gas value.
     pub fn new(context: &Context, builder: &Builder, gas_value: BasicValueEnum) -> GasPtrManager {
         let types_instance = EvmTypes::get_instance(context);
         let gas_p = builder.build_alloca(types_instance.get_gas_type(), "gas.ptr");
@@ -95,12 +107,14 @@ impl GasPtrManager {
             m_gas_ptr: gas_p
         }
     }
-
+    
+    /// Returns the gas pointer instance.
     pub fn get_gas_ptr(&self) -> &PointerValue {
         &self.m_gas_ptr
     }
 }
 
+/// Manager structure for the EVM return buffer.
 struct ReturnBufferManager<'a> {
     m_return_buf_data_ptr: PointerValue,
     m_return_buf_size_ptr: PointerValue,
@@ -109,6 +123,7 @@ struct ReturnBufferManager<'a> {
 }
 
 impl<'a> ReturnBufferManager<'a> {
+    /// Initializes an empty return buffer.
     pub fn new(context: &'a Context, builder: &'a Builder) -> ReturnBufferManager<'a> {
         let types_instance = EvmTypes::get_instance(context);
         let return_buf_data_p = builder.build_alloca(types_instance.get_byte_ptr_type(), "returndata.ptr");
@@ -121,21 +136,25 @@ impl<'a> ReturnBufferManager<'a> {
             m_builder: builder
         }
     }
-
+    
+    /// Returns the return buffer data pointer.
     pub fn get_return_buf_data_p(&self) -> &PointerValue {
         &self.m_return_buf_data_ptr
     }
-
+    
+    /// Returns the return buffer size pointer.
     pub fn get_return_buf_size_p(&self) -> &PointerValue {
         &self.m_return_buf_size_ptr
     }
 
+    /// Resets the return buffer by setting the size to zero.
     pub fn reset_return_buf(self) {
         let const_factory = EvmConstants::get_instance(self.m_context);
         self.m_builder.build_store(self.m_return_buf_size_ptr, const_factory.get_i64_zero());
     }
 }
 
+/// Manager structure for the runtime subsystem.
 pub struct RuntimeManager<'a> {
     m_context: &'a Context,
     m_builder: &'a Builder,
@@ -149,6 +168,7 @@ pub struct RuntimeManager<'a> {
 }
 
 impl<'a> RuntimeManager<'a> {
+    /// Builds a new runtime manager.
     pub fn new(context: &'a Context, builder: &'a Builder, module: &'a Module) -> RuntimeManager<'a> {
     //pub fn new(main_func_name: &str, context: &'a Context, builder: &'a Builder, module: &'a Module) -> RuntimeManager<'a> {
 
@@ -180,19 +200,23 @@ impl<'a> RuntimeManager<'a> {
             m_return_buf_manager: return_buf_mgr
         }
     }
-
+    
+    /// Returns the LLVM type of the runtime data.
     pub fn get_runtime_data_type(&self) -> StructType {
         RuntimeDataType::get_instance(self.m_context).get_type()
     }
-
+    
+    /// Returns the LLVM type of the runtime.
     pub fn get_runtime_type(&self) -> StructType {
         RuntimeType::get_instance(self.m_context).get_type()
     }
-
+    
+    /// Returns the LLVM type of a runtime pointer.
     pub fn get_runtime_ptr_type(&self) -> PointerType {
         RuntimeType::get_instance(self.m_context).get_ptr_type()
     }
-
+    
+    /// Returns the runtime pointer instance.
     pub fn get_runtime_ptr(&self) -> BasicValueEnum {
         // The parent of the first basic block is a function
 
@@ -211,28 +235,34 @@ impl<'a> RuntimeManager<'a> {
 
         runtime_ptr
     }
-
+    
+    /// Returns the gas counter pointer.
     pub fn get_gas_ptr(&self) -> &PointerValue {
         assert!(self.get_main_function() != None);
         self.m_gas_ptr_manager.get_gas_ptr()
     }
-
+    
+    /// Returns the gas counter value.
     pub fn get_gas(&self) -> BasicValueEnum {
         self.m_builder.build_load(*self.get_gas_ptr(), "gas")
     }
-
+    
+    /// Returns a pointer to the return buffer.
     pub fn get_return_buf_data_p(&self) -> &PointerValue {
         self.m_return_buf_manager.get_return_buf_data_p()
     }
-
+    
+    /// Returns a pointer to the return buffer size value.
     pub fn get_return_buf_size_p(&self) -> &PointerValue {
         self.m_return_buf_manager.get_return_buf_size_p()
     }
-
+    
+    /// Resets the return buffer.
     pub fn reset_return_buf(self) {
         self.m_return_buf_manager.reset_return_buf()
     }
 
+    /// Returns the main function given a builder and module.
     fn get_main_function_with_builder(builder: & Builder, module: & Module) -> Option<FunctionValue> {
         // The parent of the first basic block is a function
 
@@ -254,7 +284,8 @@ impl<'a> RuntimeManager<'a> {
             None
         }
     }
-
+    
+    /// Returns the main function instance.
     pub fn get_main_function(&self) -> Option<FunctionValue> {
         // The parent of the first basic block is a function
 

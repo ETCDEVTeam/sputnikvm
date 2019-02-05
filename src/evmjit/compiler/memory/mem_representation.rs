@@ -12,11 +12,11 @@ use inkwell::AddressSpace;
 use evmjit::BasicTypeEnumCompare;
 
 #[derive(Debug, Singleton)]
-/// Internal representation of EVM linear memory
+/// Internal representation of EVM linear memory.
 pub struct MemoryRepresentationType {
-    /// Type representing an EVM's memory segment
+    /// Type representing an EVM's memory segment.
     memory_type: StructType,
-    /// Type representing a pointer to an EVM memory
+    /// Type representing a pointer to an EVM memory.
     memory_ptr_type: PointerType,
 }
 
