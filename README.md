@@ -69,7 +69,7 @@ before is not supported.
 
 SputnikVM is written Rust. If you are not familiar with Rust please
 see the
-[getting started guide](https://doc.rust-lang.org/book/getting-started.html). 
+[getting started guide](https://doc.rust-lang.org/book/ch01-00-getting-started.html). 
 
 ### Build 
 
